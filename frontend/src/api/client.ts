@@ -132,9 +132,19 @@ export async function uploadReferences(files: File[], signal?: AbortSignal) {
   return { candidates }
 }
 
-export type ReconstructInput = { image: Blob } | { reference: Reference }
+export type ReconstructInput = ({ image: Blob } | { reference: Reference }) & {
+  /** The class the user confirmed. The server uses it to find a catalog model or an earlier mesh for the same car. */
+  classId?: number | null
+}
 
 async function reconstructForm(input: ReconstructInput): Promise<FormData> {
+  const form = await imageForm(input)
+  if (input.classId != null) form.append('class_id', String(input.classId))
+  form.append('source', 'reference' in input ? 'reference' : 'photo')
+  return form
+}
+
+async function imageForm(input: ReconstructInput): Promise<FormData> {
   if ('image' in input) return fileForm(input.image, 'input.jpg')
 
   // The browser fetches the reference and uploads the file itself, so the server never has to fetch a web address on our behalf.

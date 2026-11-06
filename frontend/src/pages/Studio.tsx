@@ -1,25 +1,32 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import type { Group } from 'three'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CircleCheck, CircleMinus, Download, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, CircleCheck, CircleMinus, Download, Library, TriangleAlert } from 'lucide-react'
 import { ApiError, assetUrl, getJob, reconstruct } from '../api/client'
 import type { Job, JobResult, ValidationReport } from '../api/types'
 import { Attribution } from '../components/Attribution'
 import MeshViewer from '../components/MeshViewer'
+import { colourFromImage, proportionsFor } from '../lib/adapt'
+import { exportCar, slug, type ExportFormat } from '../lib/exportCar'
 import { Card, EmptyState, ErrorNotice, PageHeader, PageLoading, Spinner, hudPrimary as primaryButton, hudSecondary as secondaryButton } from '../components/States'
 import { PhotoUpload } from '../components/PhotoUpload'
-import { ScanFrame } from '../components/hud/ScanFrame'
 import { rise, stagger } from '../components/hud/PageShell'
 import { bytes } from '../lib/format'
 import { useSession } from '../state/session'
 
+// Loaded on demand, so the 3D code stays out of the first download.
+const ShowcaseViewer = lazy(() => import('../components/ShowcaseViewer'))
+
 function useStartJob() {
-  const { photo, input } = useSession()
+  const { photo, input, identity } = useSession()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const source = input?.kind === 'photo' && photo ? { image: photo.file } : input?.kind === 'reference' ? { reference: input.reference } : null
+  const classId = identity?.class_id ?? null
+  const source =
+    input?.kind === 'photo' && photo ? { image: photo.file, classId } : input?.kind === 'reference' ? { reference: input.reference, classId } : null
 
   async function start() {
     if (!source) return
@@ -37,12 +44,144 @@ function useStartJob() {
   return { canStart: source != null, start, busy, error }
 }
 
-function SingleViewNote() {
+/** Says what the mesh was made from, so a ready-made model is never mistaken for a reconstruction of the user's photo. */
+function SourceNote({ source, label }: { source?: Job['mesh_source']; label?: string }) {
+  const car = label ?? 'the matched car'
+  if (source === 'catalog') {
+    return (
+      <p className="flex gap-2 text-sm text-ink-2">
+        <Library aria-hidden className="mt-0.5 size-4 shrink-0 text-accent" />
+        <span>Catalog model of {car}. It was made in advance, not built from your photo.</span>
+      </p>
+    )
+  }
   return (
     <p className="flex gap-2 text-sm text-ink-2">
       <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
-      <span>This is a single-view reconstruction. The sides the photo doesn't show are inferred, proportions aren't measured, and the scale is unknown.</span>
+      <span>
+        {source === 'reference' ? `Built from a reference photo of ${car}, not from your photo. ` : ''}This is a single-view reconstruction. The sides the photo doesn't show are inferred, proportions aren't
+        measured, and the scale is unknown.
+      </span>
     </p>
+  )
+}
+
+/**
+ * The designed showcase car, adapted to the user's photo, with the "taken from your photo" facts and its downloads.
+ * Used before a job starts and on every job page, so the car is there for every matched class.
+ */
+function ShowcaseBlock({ label, extra }: { label?: string | null; extra?: ReactNode }) {
+  const { photo, identity, recognition } = useSession()
+  const [paint, setPaint] = useState<string | null>(null)
+  const proportions = proportionsFor(label)
+  const model = useRef<Group | null>(null)
+  const [modelReady, setModelReady] = useState(false)
+  const [saving, setSaving] = useState<ExportFormat | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const onModel = useCallback((group: Group | null) => {
+    model.current = group
+    setModelReady(group != null)
+  }, [])
+
+  // The colour comes from the user's own photo, read in the browser. It is never sent anywhere.
+  useEffect(() => {
+    let current = true
+    setPaint(null)
+    if (photo) {
+      void colourFromImage(photo.url, recognition?.detection?.box, recognition?.image_size).then((colour) => {
+        if (current) setPaint(colour)
+      })
+    }
+    return () => {
+      current = false
+    }
+  }, [photo, recognition])
+
+  async function download(format: ExportFormat) {
+    if (!model.current) return
+    setSaving(format)
+    setSaveError(null)
+    try {
+      await exportCar(model.current, format, slug(label))
+    } catch {
+      setSaveError("The file couldn't be written. Try again, or use another format.")
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-start">
+      <div className="space-y-3">
+        <Suspense fallback={<PageLoading label="Loading the 3D car" />}>
+          <ShowcaseViewer paint={paint} proportions={proportions} onModel={onModel} />
+        </Suspense>
+        <p className="flex gap-2 text-sm text-ink-2">
+          <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+          <span>
+            This is a designed showcase car, not a 3D copy of your car.{' '}
+            {photo ? 'Only the paint colour and body proportions come from your photo.' : 'Its body proportions come from the matched car\u2019s body style.'}
+          </span>
+        </p>
+        <p className="text-xs text-ink-3">Model: Car Concept by the Khronos Group, from a public domain model by Unity Fan, licensed CC BY 4.0. Materials and animation by Apex3D.</p>
+      </div>
+      <div className="space-y-5">
+        <Card title="Taken from your photo">
+          <dl className="divide-y divide-line text-sm">
+            <div className="flex items-center justify-between gap-4 py-2">
+              <dt className="text-ink-2">Paint colour</dt>
+              <dd className="flex items-center gap-2 font-mono">
+                {paint ? (
+                  <>
+                    <span aria-hidden className="size-4 rounded border border-line-strong" style={{ background: paint }} />
+                    {paint}
+                  </>
+                ) : photo ? (
+                  'Reading'
+                ) : (
+                  'No photo in this session'
+                )}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-2">
+              <dt className="text-ink-2">Proportions</dt>
+              <dd className="text-right">{proportions.basis}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-2">
+              <dt className="text-ink-2">Matched car</dt>
+              <dd className="text-right">{label ?? 'Not confirmed'}</dd>
+            </div>
+          </dl>
+          {!identity && !label && (
+            <p className="mt-3 text-xs text-ink-3">
+              <Link to="/identity" className="text-ink underline underline-offset-4">
+                Confirm the car
+              </Link>{' '}
+              to match the body style.
+            </p>
+          )}
+        </Card>
+
+        <Card title="Download this model">
+          <ul className="grid gap-2">
+            {(['glb', 'obj', 'stl'] as ExportFormat[]).map((format) => (
+              <li key={format}>
+                <button type="button" disabled={!modelReady || saving != null} onClick={() => void download(format)} className={`${secondaryButton} w-full justify-between`}>
+                  <span className="inline-flex items-center gap-2">
+                    <Download aria-hidden className="size-4" />
+                    {format.toUpperCase()}
+                  </span>
+                  {saving === format && <span className="font-mono text-xs font-normal text-ink-3">Writing</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {saveError && <p className="mt-2 text-sm text-warning">{saveError}</p>}
+          <p className="mt-3 text-xs text-ink-3">The showcase car with your photo's colour and body proportions. It is a template model, not a scan of your car, so it has no real-world scale.</p>
+        </Card>
+        {extra}
+      </div>
+    </div>
   )
 }
 
@@ -54,7 +193,7 @@ function StartPanel() {
   if (!canStart || !inputUrl) {
     return (
       <div className="mx-auto max-w-3xl">
-        <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro="Add a car photo to build a draft mesh from. You can also start from a reference photo instead." />
+        <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro="Add a car photo to see a 3D car adapted to it. You can also start from a reference photo instead." />
         <PhotoUpload />
         <p className="mt-6 text-sm text-ink-3">
           Prefer a reference photo?{' '}
@@ -67,32 +206,37 @@ function StartPanel() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `Generate a draft mesh of ${identity.label} from the view below.` : 'Generate a draft mesh from the view below.'} />
-      <ScanFrame>
-        <img src={inputUrl} alt="Reconstruction input" className="mx-auto block max-h-[50dvh] w-auto max-w-full" />
-      </ScanFrame>
-      {input?.kind === 'reference' && (
-        <div className="mt-2">
-          <Attribution reference={input.reference} />
-        </div>
-      )}
-      <div className="mt-4">
-        <SingleViewNote />
-      </div>
-      {error && (
-        <div className="mt-4">
-          <ErrorNotice title="Couldn't start the job" message={error} />
-        </div>
-      )}
-      <div className="mt-5 flex flex-wrap gap-3">
-        <button type="button" disabled={busy} className={primaryButton} onClick={() => void start()}>
-          {busy ? 'Starting' : 'Generate mesh'}
-        </button>
-        <Link to="/references" className={secondaryButton}>
-          Choose a different view
-        </Link>
-      </div>
+    <div>
+      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `A 3D car in the style of ${identity.label}, adapted to your photo.` : 'A 3D car adapted to your photo.'} />
+      <ShowcaseBlock
+        label={identity?.label}
+        extra={
+          <Card title="Experimental: rebuild from a photo">
+            <div className="flex items-center gap-3">
+              <img src={inputUrl} alt="Reconstruction input" className="h-16 w-24 rounded-md bg-raised object-cover" />
+              <p className="text-sm text-ink-2">TripoSR can rebuild a rough mesh from one image. It takes about 3 minutes and the shape is often lumpy, so treat it as a draft.</p>
+            </div>
+            {input?.kind === 'reference' && (
+              <div className="mt-2">
+                <Attribution reference={input.reference} />
+              </div>
+            )}
+            {error && (
+              <div className="mt-3">
+                <ErrorNotice title="Couldn't start the job" message={error} />
+              </div>
+            )}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" disabled={busy} className={secondaryButton} onClick={() => void start()}>
+                {busy ? 'Starting' : 'Build experimental mesh'}
+              </button>
+              <Link to="/references" className={secondaryButton}>
+                Choose a different view
+              </Link>
+            </div>
+          </Card>
+        }
+      />
     </div>
   )
 }
@@ -291,6 +435,7 @@ function JobView({ id }: { id: string }) {
   const { identity } = useSession()
   const { job, lost, fatal } = useJob(id)
   const { canStart, start, busy, error } = useStartJob()
+  const [view, setView] = useState<'showcase' | 'mesh'>('showcase')
 
   if (fatal) {
     return <EmptyState title="Job not available" body={`${fatal} Generated files are removed by a cleanup step, so older links stop working.`} action={{ to: '/studio', label: 'Back to 3D Studio' }} />
@@ -304,14 +449,35 @@ function JobView({ id }: { id: string }) {
   }
 
   const glb = job.result?.files.find((file) => file.format === 'glb')
+  const label = identity?.label ?? job.class_name ?? null
+  const building = job.status === 'queued' || job.status === 'running'
+  const tab = (active: boolean) =>
+    `inline-flex min-h-10 items-center gap-2 rounded-lg border px-4 text-sm ${active ? 'border-accent bg-accent/15 text-ink' : 'border-line-strong text-ink-2 hover:bg-raised'}`
 
   return (
     <div>
-      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `Draft mesh of ${identity.label}.` : undefined} />
+      <Link to="/studio" className="mb-4 inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-ink">
+        <ArrowLeft aria-hidden className="size-4" />
+        Back to 3D Studio
+      </Link>
+      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={label ? (view === 'showcase' ? `A 3D car in the style of ${label}.` : job.mesh_source === 'catalog' ? `Catalog model of ${label}.` : `Experimental mesh of ${label}.`) : undefined} />
 
-      {(job.status === 'queued' || job.status === 'running') && <JobProgress job={job} lost={lost} />}
+      <div role="tablist" aria-label="Which model to show" className="mb-6 flex flex-wrap gap-2">
+        <button type="button" role="tab" aria-selected={view === 'showcase'} className={tab(view === 'showcase')} onClick={() => setView('showcase')}>
+          Showcase model
+        </button>
+        <button type="button" role="tab" aria-selected={view === 'mesh'} className={tab(view === 'mesh')} onClick={() => setView('mesh')}>
+          {job.mesh_source === 'catalog' ? 'Catalog model' : 'Experimental mesh'}
+          {building && <span className="font-mono text-xs text-accent">building</span>}
+          {job.status === 'failed' && <span className="font-mono text-xs text-warning">failed</span>}
+        </button>
+      </div>
 
-      {job.status === 'failed' && (
+      {view === 'showcase' && <ShowcaseBlock label={label} />}
+
+      {view === 'mesh' && building && <JobProgress job={job} lost={lost} />}
+
+      {view === 'mesh' && job.status === 'failed' && (
         <div className="space-y-4">
           <ErrorNotice title="Generation failed" message={job.error ?? 'The server did not report a reason.'} />
           <JobLog logs={job.logs} />
@@ -329,7 +495,7 @@ function JobView({ id }: { id: string }) {
         </div>
       )}
 
-      {job.status === 'succeeded' && job.result && (
+      {view === 'mesh' && job.status === 'succeeded' && job.result && (
         <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-start">
           <div className="space-y-5">
             {glb ? (
@@ -337,8 +503,8 @@ function JobView({ id }: { id: string }) {
             ) : (
               <ErrorNotice title="No GLB to display" message="The job finished without a GLB file. Any other formats are listed under Downloads." />
             )}
-            {glb && <p className="font-mono text-xs text-ink-3">Generated file: {glb.name}</p>}
-            <SingleViewNote />
+            {glb && <p className="font-mono text-xs text-ink-3">{job.mesh_source === 'catalog' ? 'Catalog file' : 'Generated file'}: {glb.name}</p>}
+            <SourceNote source={job.mesh_source} label={label ?? undefined} />
             <Compare />
           </div>
           <div className="space-y-5">

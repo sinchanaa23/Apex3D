@@ -81,6 +81,10 @@ export interface Job {
   logs?: string[]
   error?: string | null
   result?: JobResult | null
+  /** What the mesh was made from: a licensed catalog model, a reference photo of the matched car, or the user's own photo. */
+  mesh_source?: 'catalog' | 'reference' | 'photo' | null
+  /** The matched car's name, when the job was started with a confirmed class. */
+  class_name?: string | null
 }
 
 export interface ValidationReport {

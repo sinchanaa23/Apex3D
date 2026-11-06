@@ -190,6 +190,9 @@ class ReconstructionJobResponse(BaseModel):
     error: Optional[str] = None
     assets: Optional[ReconstructionAssets] = None
     validation: Optional[MeshValidationReport] = None
+    mesh_source: Optional[str] = Field(None, description="'catalog', 'reference' or 'photo': what the mesh was made from")
+    class_id: Optional[int] = None
+    class_name: Optional[str] = None
 
 
 # -------------------------------------------------------------------------

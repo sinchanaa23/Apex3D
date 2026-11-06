@@ -22,6 +22,7 @@ from backend.models import (
     ReconstructionOptions,
 )
 from backend.database import get_job
+from backend.services.mesh_library import cache_dir, catalog_glb, instant_job
 from backend.services.reconstruction_service import ReconstructionManager
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,24 @@ MIME_TYPE_MAP = {
 }
 
 
+def _class_name(class_id) -> Optional[str]:
+    from backend.data.stanford_cars_classes import STANFORD_CARS_CLASSES
+
+    if isinstance(class_id, int) and 0 <= class_id < len(STANFORD_CARS_CLASSES):
+        return STANFORD_CARS_CLASSES[class_id]
+    return None
+
+
+def _enqueued(job: dict) -> dict:
+    return {
+        "job_id": job["id"],
+        "status": job["status"],
+        "queue_position": 0,
+        "created_at": job["created_at"],
+        "message": "A ready-made mesh was found, no reconstruction needed.",
+    }
+
+
 @router.post(
     "/reconstruct",
     status_code=status.HTTP_202_ACCEPTED,
@@ -46,7 +65,17 @@ async def create_reconstruction_job(
     image_url: Optional[str] = Form(None, description="Optional image URL if file not provided"),
     remove_background: bool = Form(True),
     mc_resolution: int = Form(256),
+    class_id: Optional[int] = Form(None, description="Confirmed Stanford Cars class, if the user matched one"),
+    source: str = Form("photo", description="'photo' (the user's own) or 'reference' (a reference photo of the matched car)"),
 ):
+    # A licensed catalog model for the matched car, or a mesh already built from a reference photo, is returned at once.
+    base_options = {"model": "triposr", "remove_background": remove_background, "mc_resolution": mc_resolution}
+    if class_id is not None:
+        if catalog_glb(class_id):
+            return _enqueued(instant_job(class_id, "catalog", base_options))
+        if source == "reference" and cache_dir(class_id):
+            return _enqueued(instant_job(class_id, "reference", base_options))
+
     upload_id = uuid.uuid4().hex[:10]
     target_path = None
 
@@ -87,11 +116,7 @@ async def create_reconstruction_job(
         )
 
     # Options
-    options = {
-        "model": "triposr",
-        "remove_background": remove_background,
-        "mc_resolution": mc_resolution,
-    }
+    options = {**base_options, "mesh_source": "reference" if (source == "reference" and class_id is not None) else "photo", "class_id": class_id}
 
     mgr = ReconstructionManager.get_instance()
     job_data = mgr.submit_job(target_path, options=options)
@@ -132,6 +157,9 @@ async def get_job_status(id: str):
         error=job.get("error"),
         assets=job.get("assets"),
         validation=job.get("validation"),
+        mesh_source=(job.get("options") or {}).get("mesh_source"),
+        class_id=(job.get("options") or {}).get("class_id"),
+        class_name=_class_name((job.get("options") or {}).get("class_id")),
     )
 
 
