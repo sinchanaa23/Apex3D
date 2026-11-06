@@ -1,0 +1,20 @@
+{
+  "generated_by": "scripts/export_app_classifier.py",
+  "generated_at": "2026-11-06 22:16:51",
+  "file": "checkpoints/model_quantized.onnx",
+  "size_mb": 34.61,
+  "temperature_baked_in": 0.6166166067123413,
+  "output": "temperature-scaled logits; softmax gives calibrated probabilities",
+  "max_prob_diff_vs_fp32_softmax_logits_over_T_128_val": 1.7881393432617188e-07,
+  "val_top1": 0.9198036006546645,
+  "test_top1": 0.9217758985200846,
+  "test_top5": 0.9850764830244995,
+  "deployed_variant_test_top1_from_01b": 0.9217758985200846,
+  "cpu_latency_ms_b1": 22.41,
+  "threads": 6,
+  "app_thresholds": {
+    "APEX3D_REJECTED_THRESHOLD": 0.52,
+    "APEX3D_MARGIN_THRESHOLD": 0.34
+  },
+  "eval_seconds": 337.0
+}

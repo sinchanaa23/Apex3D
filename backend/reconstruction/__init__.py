@@ -4,9 +4,11 @@ Usage (Person C, from a background job)::
 
     from backend.reconstruction import reconstruct, ReconstructionError
 
-    result = reconstruct("upload.jpg")          # or a PIL.Image
-    result.mesh.export("mesh.glb")              # trimesh.Trimesh, Y-up, unitless
-    job_meta = result.summary()                 # JSON-safe timings/settings/notes
+    mesh = reconstruct(pil_image)               # trimesh.Trimesh, Y-up, unitless
+    job_meta = mesh.metadata["apex3d"]          # JSON-safe timings/settings/notes
+
+    # or, with the processed input image as well:
+    result = reconstruct_detailed(pil_image)    # .mesh, .processed_image, .summary()
 """
 
 from .triposr_backend import (
@@ -15,6 +17,7 @@ from .triposr_backend import (
     ReconstructionSettings,
     preprocess,
     reconstruct,
+    reconstruct_detailed,
     release_gpu,
 )
 
@@ -24,5 +27,6 @@ __all__ = [
     "ReconstructionSettings",
     "preprocess",
     "reconstruct",
+    "reconstruct_detailed",
     "release_gpu",
 ]
