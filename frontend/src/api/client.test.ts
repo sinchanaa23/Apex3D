@@ -108,3 +108,19 @@ describe('getMetrics', () => {
     expect(metrics.message).toBe('No metrics yet')
   })
 })
+
+import personBFile from './fixtures/person_b_app_metrics.json'
+
+describe('getMetrics with the real backend file and the saved result files together', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("shows Person B's sections from the backend and adds Person A's extras from the saved files", async () => {
+    serve({ '/api/metrics': () => json({ status: 'available', source_file: 'eval_P5_metrics.json', metrics: personBFile }), ...files })
+    const metrics = await getMetrics()
+    expect((metrics.detection as { source: string }).source).toContain('detector_resnet50') // from the backend file
+    expect(filled(metrics.states)).toBe(true) // calibration and confidence states come from Person A's file
+    expect(filled(metrics.calibration)).toBe(true)
+    expect(filled(metrics.run)).toBe(true)
+    expect(filled(metrics.robustness)).toBe(false) // nobody has produced it
+  })
+})

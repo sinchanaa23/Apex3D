@@ -275,6 +275,18 @@ export default function Lab() {
           <Section title="Confidence and rejection" why="Raising the threshold rejects more images and is more accurate on those it keeps. The chosen threshold decides the confident state on the identity page." value={metrics.data.confidence}>
             {(d) => {
               const rows = [...d.rows].sort((a, b) => a.threshold - b.threshold)
+              // One threshold is a single point, which cannot be drawn as a curve, so show it as a table.
+              if (rows.length < 2) {
+                return (
+                  <>
+                    <Table
+                      head={['Threshold', 'Coverage', 'Accuracy']}
+                      rows={rows.map((r) => [<Plain>{r.threshold.toFixed(2)}</Plain>, <Plain>{percent(r.coverage)}</Plain>, <Plain>{percent(r.accuracy)}</Plain>])}
+                    />
+                    {d.chosen_threshold != null && <p className="mt-3 text-sm text-ink-3">Chosen on the validation set: {d.chosen_threshold}.</p>}
+                  </>
+                )
+              }
               return (
                 <>
                   <div className="hud-panel p-4">

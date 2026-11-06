@@ -1,0 +1,48 @@
+{
+  "experiment": "detector_evaluation",
+  "detector": "torchvision Faster R-CNN mobilenet FPN, COCO weights, not retrained",
+  "vehicle_classes": [
+    "car",
+    "bus",
+    "truck"
+  ],
+  "split": "test",
+  "is_random_sample": true,
+  "images": 500,
+  "seed": 42,
+  "device": "cpu",
+  "seconds_per_image_median": 0.7687982998322695,
+  "selection_rule_in_app": "largest_confident",
+  "selection_rules": {
+    "top_score": {
+      "images": 500,
+      "mean_iou": 0.7874439300164315,
+      "median_iou": 0.9253242849514935,
+      "share_iou_at_least_50": 0.844,
+      "share_iou_at_least_75": 0.836,
+      "images_with_no_vehicle_found": 3
+    },
+    "largest_confident": {
+      "images": 500,
+      "mean_iou": 0.9163117458153687,
+      "median_iou": 0.9335135848260774,
+      "share_iou_at_least_50": 0.986,
+      "share_iou_at_least_75": 0.978,
+      "images_with_no_vehicle_found": 3
+    },
+    "score_times_area": {
+      "images": 500,
+      "mean_iou": 0.9158478874756647,
+      "median_iou": 0.9322926147910096,
+      "share_iou_at_least_50": 0.988,
+      "share_iou_at_least_75": 0.98,
+      "images_with_no_vehicle_found": 3
+    }
+  },
+  "average_precision": {
+    "ap50": 0.7415837109882153,
+    "ap75": 0.7355126513925002,
+    "map_50_95": 0.6435592762421689
+  },
+  "map_caveat": "One car is annotated per image, so correct detections of other cars count as false positives."
+}

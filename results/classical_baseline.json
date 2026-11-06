@@ -1,0 +1,1510 @@
+{
+  "experiment": "classical_baseline",
+  "model": "StandardScaler + PCA(256) + LinearSVC on HSV, LBP, HOG and geometric features",
+  "crop": "annotated box + 8% margin",
+  "fit_on": "train + val",
+  "evaluated_on": "test",
+  "test_images": 8041,
+  "chosen_C": 0.01,
+  "adaptive_clahe": false,
+  "test": {
+    "top1": 0.17323715955726898,
+    "top5": 0.3681134187290138,
+    "macro_f1": 0.15853209374504879,
+    "macro_precision": 0.16546821176483673,
+    "macro_recall": 0.17355415846433486
+  },
+  "validation_by_family": [
+    {
+      "features": "hsv",
+      "dimensions": 32,
+      "top1": 0.031096563011456628,
+      "top5": 0.1039279869067103,
+      "fit_seconds": 5.1
+    },
+    {
+      "features": "lbp",
+      "dimensions": 160,
+      "top1": 0.04091653027823241,
+      "top5": 0.13829787234042554,
+      "fit_seconds": 47.0
+    },
+    {
+      "features": "hog",
+      "dimensions": 1764,
+      "top1": 0.14402618657937807,
+      "top5": 0.3150572831423895,
+      "fit_seconds": 81.4
+    },
+    {
+      "features": "geometry",
+      "dimensions": 12,
+      "top1": 0.014729950900163666,
+      "top5": 0.05319148936170213,
+      "fit_seconds": 4.0
+    },
+    {
+      "features": "all",
+      "dimensions": 1968,
+      "top1": 0.16775777414075285,
+      "top5": 0.337152209492635,
+      "fit_seconds": 75.2
+    }
+  ],
+  "validation_tuning": [
+    {
+      "C": 0.001,
+      "top1": 0.15548281505728315,
+      "top5": 0.34942716857610473
+    },
+    {
+      "C": 0.01,
+      "top1": 0.16775777414075285,
+      "top5": 0.337152209492635
+    },
+    {
+      "C": 0.1,
+      "top1": 0.12274959083469722,
+      "top5": 0.3011456628477905
+    }
+  ],
+  "validation_clahe": {
+    "without": {
+      "top1": 0.16775777414075285,
+      "top5": 0.337152209492635
+    },
+    "with": {
+      "top1": 0.16448445171849427,
+      "top5": 0.3445171849427169
+    }
+  },
+  "per_image_ms_cpu": 14.768969998694956,
+  "model_size_mb": 2.479813,
+  "cpu": "Intel i5-1135G7",
+  "most_confused": [
+    {
+      "true": "Chevrolet Express Cargo Van 2007",
+      "predicted": "GMC Savana Van 2012",
+      "count": 14
+    },
+    {
+      "true": "Chevrolet Express Van 2007",
+      "predicted": "GMC Savana Van 2012",
+      "count": 12
+    },
+    {
+      "true": "Audi V8 Sedan 1994",
+      "predicted": "Audi 100 Sedan 1994",
+      "count": 11
+    },
+    {
+      "true": "Dodge Sprinter Cargo Van 2009",
+      "predicted": "Mercedes-Benz Sprinter Van 2012",
+      "count": 10
+    },
+    {
+      "true": "Bugatti Veyron 16.4 Convertible 2009",
+      "predicted": "Bugatti Veyron 16.4 Coupe 2009",
+      "count": 10
+    },
+    {
+      "true": "Jeep Wrangler SUV 2012",
+      "predicted": "AM General Hummer SUV 2000",
+      "count": 8
+    },
+    {
+      "true": "Chevrolet Silverado 1500 Hybrid Crew Cab 2012",
+      "predicted": "Chevrolet Silverado 1500 Classic Extended Cab 2007",
+      "count": 8
+    },
+    {
+      "true": "Jeep Liberty SUV 2012",
+      "predicted": "Jeep Wrangler SUV 2012",
+      "count": 7
+    },
+    {
+      "true": "Bugatti Veyron 16.4 Coupe 2009",
+      "predicted": "Bugatti Veyron 16.4 Convertible 2009",
+      "count": 7
+    },
+    {
+      "true": "McLaren MP4-12C Coupe 2012",
+      "predicted": "Lamborghini Aventador Coupe 2012",
+      "count": 7
+    }
+  ],
+  "per_class": [
+    {
+      "class": "AM General Hummer SUV 2000",
+      "precision": 0.3028,
+      "recall": 0.75,
+      "f1-score": 0.4314,
+      "support": 44.0
+    },
+    {
+      "class": "Acura RL Sedan 2012",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 32.0
+    },
+    {
+      "class": "Acura TL Sedan 2012",
+      "precision": 0.1212,
+      "recall": 0.093,
+      "f1-score": 0.1053,
+      "support": 43.0
+    },
+    {
+      "class": "Acura TL Type-S 2008",
+      "precision": 0.0811,
+      "recall": 0.0714,
+      "f1-score": 0.0759,
+      "support": 42.0
+    },
+    {
+      "class": "Acura TSX Sedan 2012",
+      "precision": 0.125,
+      "recall": 0.025,
+      "f1-score": 0.0417,
+      "support": 40.0
+    },
+    {
+      "class": "Acura Integra Type R 2001",
+      "precision": 0.2564,
+      "recall": 0.2273,
+      "f1-score": 0.241,
+      "support": 44.0
+    },
+    {
+      "class": "Acura ZDX Hatchback 2012",
+      "precision": 0.3889,
+      "recall": 0.1795,
+      "f1-score": 0.2456,
+      "support": 39.0
+    },
+    {
+      "class": "Aston Martin V8 Vantage Convertible 2012",
+      "precision": 0.0714,
+      "recall": 0.0667,
+      "f1-score": 0.069,
+      "support": 45.0
+    },
+    {
+      "class": "Aston Martin V8 Vantage Coupe 2012",
+      "precision": 0.1379,
+      "recall": 0.0976,
+      "f1-score": 0.1143,
+      "support": 41.0
+    },
+    {
+      "class": "Aston Martin Virage Convertible 2012",
+      "precision": 0.25,
+      "recall": 0.1212,
+      "f1-score": 0.1633,
+      "support": 33.0
+    },
+    {
+      "class": "Aston Martin Virage Coupe 2012",
+      "precision": 0.1765,
+      "recall": 0.0789,
+      "f1-score": 0.1091,
+      "support": 38.0
+    },
+    {
+      "class": "Audi RS 4 Convertible 2008",
+      "precision": 0.2308,
+      "recall": 0.1667,
+      "f1-score": 0.1935,
+      "support": 36.0
+    },
+    {
+      "class": "Audi A5 Coupe 2012",
+      "precision": 0.1212,
+      "recall": 0.0976,
+      "f1-score": 0.1081,
+      "support": 41.0
+    },
+    {
+      "class": "Audi TTS Coupe 2012",
+      "precision": 0.0851,
+      "recall": 0.0952,
+      "f1-score": 0.0899,
+      "support": 42.0
+    },
+    {
+      "class": "Audi R8 Coupe 2012",
+      "precision": 0.194,
+      "recall": 0.3023,
+      "f1-score": 0.2364,
+      "support": 43.0
+    },
+    {
+      "class": "Audi V8 Sedan 1994",
+      "precision": 0.1136,
+      "recall": 0.1163,
+      "f1-score": 0.1149,
+      "support": 43.0
+    },
+    {
+      "class": "Audi 100 Sedan 1994",
+      "precision": 0.1622,
+      "recall": 0.3,
+      "f1-score": 0.2105,
+      "support": 40.0
+    },
+    {
+      "class": "Audi 100 Wagon 1994",
+      "precision": 0.1613,
+      "recall": 0.119,
+      "f1-score": 0.137,
+      "support": 42.0
+    },
+    {
+      "class": "Audi TT Hatchback 2011",
+      "precision": 0.1081,
+      "recall": 0.1,
+      "f1-score": 0.1039,
+      "support": 40.0
+    },
+    {
+      "class": "Audi S6 Sedan 2011",
+      "precision": 0.125,
+      "recall": 0.1304,
+      "f1-score": 0.1277,
+      "support": 46.0
+    },
+    {
+      "class": "Audi S5 Convertible 2012",
+      "precision": 0.1333,
+      "recall": 0.0952,
+      "f1-score": 0.1111,
+      "support": 42.0
+    },
+    {
+      "class": "Audi S5 Coupe 2012",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 42.0
+    },
+    {
+      "class": "Audi S4 Sedan 2012",
+      "precision": 0.2222,
+      "recall": 0.1026,
+      "f1-score": 0.1404,
+      "support": 39.0
+    },
+    {
+      "class": "Audi S4 Sedan 2007",
+      "precision": 0.0769,
+      "recall": 0.0444,
+      "f1-score": 0.0563,
+      "support": 45.0
+    },
+    {
+      "class": "Audi TT RS Coupe 2012",
+      "precision": 0.075,
+      "recall": 0.1538,
+      "f1-score": 0.1008,
+      "support": 39.0
+    },
+    {
+      "class": "BMW ActiveHybrid 5 Sedan 2012",
+      "precision": 0.2692,
+      "recall": 0.2059,
+      "f1-score": 0.2333,
+      "support": 34.0
+    },
+    {
+      "class": "BMW 1 Series Convertible 2012",
+      "precision": 0.3077,
+      "recall": 0.1143,
+      "f1-score": 0.1667,
+      "support": 35.0
+    },
+    {
+      "class": "BMW 1 Series Coupe 2012",
+      "precision": 0.1944,
+      "recall": 0.1707,
+      "f1-score": 0.1818,
+      "support": 41.0
+    },
+    {
+      "class": "BMW 3 Series Sedan 2012",
+      "precision": 0.1429,
+      "recall": 0.119,
+      "f1-score": 0.1299,
+      "support": 42.0
+    },
+    {
+      "class": "BMW 3 Series Wagon 2012",
+      "precision": 0.2143,
+      "recall": 0.1463,
+      "f1-score": 0.1739,
+      "support": 41.0
+    },
+    {
+      "class": "BMW 6 Series Convertible 2007",
+      "precision": 0.1429,
+      "recall": 0.0909,
+      "f1-score": 0.1111,
+      "support": 44.0
+    },
+    {
+      "class": "BMW X5 SUV 2007",
+      "precision": 0.1579,
+      "recall": 0.0732,
+      "f1-score": 0.1,
+      "support": 41.0
+    },
+    {
+      "class": "BMW X6 SUV 2012",
+      "precision": 0.1739,
+      "recall": 0.0952,
+      "f1-score": 0.1231,
+      "support": 42.0
+    },
+    {
+      "class": "BMW M3 Coupe 2012",
+      "precision": 0.1739,
+      "recall": 0.0909,
+      "f1-score": 0.1194,
+      "support": 44.0
+    },
+    {
+      "class": "BMW M5 Sedan 2010",
+      "precision": 0.0952,
+      "recall": 0.0488,
+      "f1-score": 0.0645,
+      "support": 41.0
+    },
+    {
+      "class": "BMW M6 Convertible 2010",
+      "precision": 0.0909,
+      "recall": 0.0732,
+      "f1-score": 0.0811,
+      "support": 41.0
+    },
+    {
+      "class": "BMW X3 SUV 2012",
+      "precision": 0.3871,
+      "recall": 0.3158,
+      "f1-score": 0.3478,
+      "support": 38.0
+    },
+    {
+      "class": "BMW Z4 Convertible 2012",
+      "precision": 0.1429,
+      "recall": 0.225,
+      "f1-score": 0.1748,
+      "support": 40.0
+    },
+    {
+      "class": "Bentley Continental Supersports Conv. Convertible 2012",
+      "precision": 0.1071,
+      "recall": 0.0833,
+      "f1-score": 0.0938,
+      "support": 36.0
+    },
+    {
+      "class": "Bentley Arnage Sedan 2009",
+      "precision": 0.2353,
+      "recall": 0.1026,
+      "f1-score": 0.1429,
+      "support": 39.0
+    },
+    {
+      "class": "Bentley Mulsanne Sedan 2011",
+      "precision": 0.2292,
+      "recall": 0.3143,
+      "f1-score": 0.2651,
+      "support": 35.0
+    },
+    {
+      "class": "Bentley Continental GT Coupe 2012",
+      "precision": 0.1818,
+      "recall": 0.1765,
+      "f1-score": 0.1791,
+      "support": 34.0
+    },
+    {
+      "class": "Bentley Continental GT Coupe 2007",
+      "precision": 0.1364,
+      "recall": 0.1957,
+      "f1-score": 0.1607,
+      "support": 46.0
+    },
+    {
+      "class": "Bentley Continental Flying Spur Sedan 2007",
+      "precision": 0.119,
+      "recall": 0.1136,
+      "f1-score": 0.1163,
+      "support": 44.0
+    },
+    {
+      "class": "Bugatti Veyron 16.4 Convertible 2009",
+      "precision": 0.1875,
+      "recall": 0.2812,
+      "f1-score": 0.225,
+      "support": 32.0
+    },
+    {
+      "class": "Bugatti Veyron 16.4 Coupe 2009",
+      "precision": 0.2,
+      "recall": 0.3721,
+      "f1-score": 0.2602,
+      "support": 43.0
+    },
+    {
+      "class": "Buick Regal GS 2012",
+      "precision": 0.1875,
+      "recall": 0.0857,
+      "f1-score": 0.1176,
+      "support": 35.0
+    },
+    {
+      "class": "Buick Rainier SUV 2007",
+      "precision": 0.1379,
+      "recall": 0.0952,
+      "f1-score": 0.1127,
+      "support": 42.0
+    },
+    {
+      "class": "Buick Verano Sedan 2012",
+      "precision": 0.25,
+      "recall": 0.0541,
+      "f1-score": 0.0889,
+      "support": 37.0
+    },
+    {
+      "class": "Buick Enclave SUV 2012",
+      "precision": 0.1569,
+      "recall": 0.1905,
+      "f1-score": 0.172,
+      "support": 42.0
+    },
+    {
+      "class": "Cadillac CTS-V Sedan 2012",
+      "precision": 0.3143,
+      "recall": 0.2558,
+      "f1-score": 0.2821,
+      "support": 43.0
+    },
+    {
+      "class": "Cadillac SRX SUV 2012",
+      "precision": 0.2571,
+      "recall": 0.2195,
+      "f1-score": 0.2368,
+      "support": 41.0
+    },
+    {
+      "class": "Cadillac Escalade EXT Crew Cab 2007",
+      "precision": 0.2917,
+      "recall": 0.1591,
+      "f1-score": 0.2059,
+      "support": 44.0
+    },
+    {
+      "class": "Chevrolet Silverado 1500 Hybrid Crew Cab 2012",
+      "precision": 0.0714,
+      "recall": 0.05,
+      "f1-score": 0.0588,
+      "support": 40.0
+    },
+    {
+      "class": "Chevrolet Corvette Convertible 2012",
+      "precision": 0.1667,
+      "recall": 0.1538,
+      "f1-score": 0.16,
+      "support": 39.0
+    },
+    {
+      "class": "Chevrolet Corvette ZR1 2012",
+      "precision": 0.1132,
+      "recall": 0.1304,
+      "f1-score": 0.1212,
+      "support": 46.0
+    },
+    {
+      "class": "Chevrolet Corvette Ron Fellows Edition Z06 2007",
+      "precision": 0.1194,
+      "recall": 0.2162,
+      "f1-score": 0.1538,
+      "support": 37.0
+    },
+    {
+      "class": "Chevrolet Traverse SUV 2012",
+      "precision": 0.1,
+      "recall": 0.1136,
+      "f1-score": 0.1064,
+      "support": 44.0
+    },
+    {
+      "class": "Chevrolet Camaro Convertible 2012",
+      "precision": 0.1667,
+      "recall": 0.1818,
+      "f1-score": 0.1739,
+      "support": 44.0
+    },
+    {
+      "class": "Chevrolet HHR SS 2010",
+      "precision": 0.36,
+      "recall": 0.5,
+      "f1-score": 0.4186,
+      "support": 36.0
+    },
+    {
+      "class": "Chevrolet Impala Sedan 2007",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 43.0
+    },
+    {
+      "class": "Chevrolet Tahoe Hybrid SUV 2012",
+      "precision": 0.2917,
+      "recall": 0.1892,
+      "f1-score": 0.2295,
+      "support": 37.0
+    },
+    {
+      "class": "Chevrolet Sonic Sedan 2012",
+      "precision": 0.1875,
+      "recall": 0.0682,
+      "f1-score": 0.1,
+      "support": 44.0
+    },
+    {
+      "class": "Chevrolet Express Cargo Van 2007",
+      "precision": 0.1951,
+      "recall": 0.2759,
+      "f1-score": 0.2286,
+      "support": 29.0
+    },
+    {
+      "class": "Chevrolet Avalanche Crew Cab 2012",
+      "precision": 0.0943,
+      "recall": 0.1111,
+      "f1-score": 0.102,
+      "support": 45.0
+    },
+    {
+      "class": "Chevrolet Cobalt SS 2010",
+      "precision": 0.1633,
+      "recall": 0.1951,
+      "f1-score": 0.1778,
+      "support": 41.0
+    },
+    {
+      "class": "Chevrolet Malibu Hybrid Sedan 2010",
+      "precision": 0.2857,
+      "recall": 0.0526,
+      "f1-score": 0.0889,
+      "support": 38.0
+    },
+    {
+      "class": "Chevrolet TrailBlazer SS 2009",
+      "precision": 0.0741,
+      "recall": 0.05,
+      "f1-score": 0.0597,
+      "support": 40.0
+    },
+    {
+      "class": "Chevrolet Silverado 2500HD Regular Cab 2012",
+      "precision": 0.1356,
+      "recall": 0.2105,
+      "f1-score": 0.1649,
+      "support": 38.0
+    },
+    {
+      "class": "Chevrolet Silverado 1500 Classic Extended Cab 2007",
+      "precision": 0.25,
+      "recall": 0.5,
+      "f1-score": 0.3333,
+      "support": 42.0
+    },
+    {
+      "class": "Chevrolet Express Van 2007",
+      "precision": 0.2188,
+      "recall": 0.2,
+      "f1-score": 0.209,
+      "support": 35.0
+    },
+    {
+      "class": "Chevrolet Monte Carlo Coupe 2007",
+      "precision": 0.125,
+      "recall": 0.0222,
+      "f1-score": 0.0377,
+      "support": 45.0
+    },
+    {
+      "class": "Chevrolet Malibu Sedan 2007",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 44.0
+    },
+    {
+      "class": "Chevrolet Silverado 1500 Extended Cab 2012",
+      "precision": 0.1321,
+      "recall": 0.1628,
+      "f1-score": 0.1458,
+      "support": 43.0
+    },
+    {
+      "class": "Chevrolet Silverado 1500 Regular Cab 2012",
+      "precision": 0.0678,
+      "recall": 0.0909,
+      "f1-score": 0.0777,
+      "support": 44.0
+    },
+    {
+      "class": "Chrysler Aspen SUV 2009",
+      "precision": 0.1053,
+      "recall": 0.0465,
+      "f1-score": 0.0645,
+      "support": 43.0
+    },
+    {
+      "class": "Chrysler Sebring Convertible 2010",
+      "precision": 0.0556,
+      "recall": 0.025,
+      "f1-score": 0.0345,
+      "support": 40.0
+    },
+    {
+      "class": "Chrysler Town and Country Minivan 2012",
+      "precision": 0.1333,
+      "recall": 0.1622,
+      "f1-score": 0.1463,
+      "support": 37.0
+    },
+    {
+      "class": "Chrysler 300 SRT-8 2010",
+      "precision": 0.0741,
+      "recall": 0.0417,
+      "f1-score": 0.0533,
+      "support": 48.0
+    },
+    {
+      "class": "Chrysler Crossfire Convertible 2008",
+      "precision": 0.2632,
+      "recall": 0.3488,
+      "f1-score": 0.3,
+      "support": 43.0
+    },
+    {
+      "class": "Chrysler PT Cruiser Convertible 2008",
+      "precision": 0.1228,
+      "recall": 0.1556,
+      "f1-score": 0.1373,
+      "support": 45.0
+    },
+    {
+      "class": "Daewoo Nubira Wagon 2002",
+      "precision": 0.0984,
+      "recall": 0.1333,
+      "f1-score": 0.1132,
+      "support": 45.0
+    },
+    {
+      "class": "Dodge Caliber Wagon 2012",
+      "precision": 0.125,
+      "recall": 0.05,
+      "f1-score": 0.0714,
+      "support": 40.0
+    },
+    {
+      "class": "Dodge Caliber Wagon 2007",
+      "precision": 0.1935,
+      "recall": 0.1429,
+      "f1-score": 0.1644,
+      "support": 42.0
+    },
+    {
+      "class": "Dodge Caravan Minivan 1997",
+      "precision": 0.2093,
+      "recall": 0.4186,
+      "f1-score": 0.2791,
+      "support": 43.0
+    },
+    {
+      "class": "Dodge Ram Pickup 3500 Crew Cab 2010",
+      "precision": 0.274,
+      "recall": 0.4762,
+      "f1-score": 0.3478,
+      "support": 42.0
+    },
+    {
+      "class": "Dodge Ram Pickup 3500 Quad Cab 2009",
+      "precision": 0.1786,
+      "recall": 0.2273,
+      "f1-score": 0.2,
+      "support": 44.0
+    },
+    {
+      "class": "Dodge Sprinter Cargo Van 2009",
+      "precision": 0.3014,
+      "recall": 0.5641,
+      "f1-score": 0.3929,
+      "support": 39.0
+    },
+    {
+      "class": "Dodge Journey SUV 2012",
+      "precision": 0.0588,
+      "recall": 0.0455,
+      "f1-score": 0.0513,
+      "support": 44.0
+    },
+    {
+      "class": "Dodge Dakota Crew Cab 2010",
+      "precision": 0.18,
+      "recall": 0.2195,
+      "f1-score": 0.1978,
+      "support": 41.0
+    },
+    {
+      "class": "Dodge Dakota Club Cab 2007",
+      "precision": 0.0741,
+      "recall": 0.0526,
+      "f1-score": 0.0615,
+      "support": 38.0
+    },
+    {
+      "class": "Dodge Magnum Wagon 2008",
+      "precision": 0.1481,
+      "recall": 0.1,
+      "f1-score": 0.1194,
+      "support": 40.0
+    },
+    {
+      "class": "Dodge Challenger SRT8 2011",
+      "precision": 0.2143,
+      "recall": 0.3077,
+      "f1-score": 0.2526,
+      "support": 39.0
+    },
+    {
+      "class": "Dodge Durango SUV 2012",
+      "precision": 0.1463,
+      "recall": 0.1395,
+      "f1-score": 0.1429,
+      "support": 43.0
+    },
+    {
+      "class": "Dodge Durango SUV 2007",
+      "precision": 0.1892,
+      "recall": 0.1556,
+      "f1-score": 0.1707,
+      "support": 45.0
+    },
+    {
+      "class": "Dodge Charger Sedan 2012",
+      "precision": 0.0741,
+      "recall": 0.0488,
+      "f1-score": 0.0588,
+      "support": 41.0
+    },
+    {
+      "class": "Dodge Charger SRT-8 2009",
+      "precision": 0.2245,
+      "recall": 0.2619,
+      "f1-score": 0.2418,
+      "support": 42.0
+    },
+    {
+      "class": "Eagle Talon Hatchback 1998",
+      "precision": 0.0725,
+      "recall": 0.1087,
+      "f1-score": 0.087,
+      "support": 46.0
+    },
+    {
+      "class": "FIAT 500 Abarth 2012",
+      "precision": 0.3548,
+      "recall": 0.4074,
+      "f1-score": 0.3793,
+      "support": 27.0
+    },
+    {
+      "class": "FIAT 500 Convertible 2012",
+      "precision": 0.2115,
+      "recall": 0.3333,
+      "f1-score": 0.2588,
+      "support": 33.0
+    },
+    {
+      "class": "Ferrari FF Coupe 2012",
+      "precision": 0.1429,
+      "recall": 0.1429,
+      "f1-score": 0.1429,
+      "support": 42.0
+    },
+    {
+      "class": "Ferrari California Convertible 2012",
+      "precision": 0.1549,
+      "recall": 0.2821,
+      "f1-score": 0.2,
+      "support": 39.0
+    },
+    {
+      "class": "Ferrari 458 Italia Convertible 2012",
+      "precision": 0.1494,
+      "recall": 0.3333,
+      "f1-score": 0.2063,
+      "support": 39.0
+    },
+    {
+      "class": "Ferrari 458 Italia Coupe 2012",
+      "precision": 0.1842,
+      "recall": 0.1667,
+      "f1-score": 0.175,
+      "support": 42.0
+    },
+    {
+      "class": "Fisker Karma Sedan 2012",
+      "precision": 0.1944,
+      "recall": 0.1628,
+      "f1-score": 0.1772,
+      "support": 43.0
+    },
+    {
+      "class": "Ford F-450 Super Duty Crew Cab 2012",
+      "precision": 0.2295,
+      "recall": 0.3415,
+      "f1-score": 0.2745,
+      "support": 41.0
+    },
+    {
+      "class": "Ford Mustang Convertible 2007",
+      "precision": 0.1304,
+      "recall": 0.0682,
+      "f1-score": 0.0896,
+      "support": 44.0
+    },
+    {
+      "class": "Ford Freestar Minivan 2007",
+      "precision": 0.1471,
+      "recall": 0.1136,
+      "f1-score": 0.1282,
+      "support": 44.0
+    },
+    {
+      "class": "Ford Expedition EL SUV 2009",
+      "precision": 0.2333,
+      "recall": 0.1591,
+      "f1-score": 0.1892,
+      "support": 44.0
+    },
+    {
+      "class": "Ford Edge SUV 2012",
+      "precision": 0.1765,
+      "recall": 0.0698,
+      "f1-score": 0.1,
+      "support": 43.0
+    },
+    {
+      "class": "Ford Ranger SuperCab 2011",
+      "precision": 0.1,
+      "recall": 0.0952,
+      "f1-score": 0.0976,
+      "support": 42.0
+    },
+    {
+      "class": "Ford GT Coupe 2006",
+      "precision": 0.2222,
+      "recall": 0.3556,
+      "f1-score": 0.2735,
+      "support": 45.0
+    },
+    {
+      "class": "Ford F-150 Regular Cab 2012",
+      "precision": 0.2381,
+      "recall": 0.119,
+      "f1-score": 0.1587,
+      "support": 42.0
+    },
+    {
+      "class": "Ford F-150 Regular Cab 2007",
+      "precision": 0.2143,
+      "recall": 0.2,
+      "f1-score": 0.2069,
+      "support": 45.0
+    },
+    {
+      "class": "Ford Focus Sedan 2007",
+      "precision": 0.1579,
+      "recall": 0.0667,
+      "f1-score": 0.0938,
+      "support": 45.0
+    },
+    {
+      "class": "Ford E-Series Wagon Van 2012",
+      "precision": 0.0882,
+      "recall": 0.0811,
+      "f1-score": 0.0845,
+      "support": 37.0
+    },
+    {
+      "class": "Ford Fiesta Sedan 2012",
+      "precision": 0.1667,
+      "recall": 0.119,
+      "f1-score": 0.1389,
+      "support": 42.0
+    },
+    {
+      "class": "GMC Terrain SUV 2012",
+      "precision": 0.1875,
+      "recall": 0.1463,
+      "f1-score": 0.1644,
+      "support": 41.0
+    },
+    {
+      "class": "GMC Savana Van 2012",
+      "precision": 0.193,
+      "recall": 0.4853,
+      "f1-score": 0.2762,
+      "support": 68.0
+    },
+    {
+      "class": "GMC Yukon Hybrid SUV 2012",
+      "precision": 0.2143,
+      "recall": 0.1429,
+      "f1-score": 0.1714,
+      "support": 42.0
+    },
+    {
+      "class": "GMC Acadia SUV 2012",
+      "precision": 0.0952,
+      "recall": 0.1364,
+      "f1-score": 0.1121,
+      "support": 44.0
+    },
+    {
+      "class": "GMC Canyon Extended Cab 2012",
+      "precision": 0.1579,
+      "recall": 0.075,
+      "f1-score": 0.1017,
+      "support": 40.0
+    },
+    {
+      "class": "Geo Metro Convertible 1993",
+      "precision": 0.2297,
+      "recall": 0.3864,
+      "f1-score": 0.2881,
+      "support": 44.0
+    },
+    {
+      "class": "HUMMER H3T Crew Cab 2010",
+      "precision": 0.2286,
+      "recall": 0.2051,
+      "f1-score": 0.2162,
+      "support": 39.0
+    },
+    {
+      "class": "HUMMER H2 SUT Crew Cab 2009",
+      "precision": 0.2025,
+      "recall": 0.3721,
+      "f1-score": 0.2623,
+      "support": 43.0
+    },
+    {
+      "class": "Honda Odyssey Minivan 2012",
+      "precision": 0.1562,
+      "recall": 0.119,
+      "f1-score": 0.1351,
+      "support": 42.0
+    },
+    {
+      "class": "Honda Odyssey Minivan 2007",
+      "precision": 0.1667,
+      "recall": 0.122,
+      "f1-score": 0.1408,
+      "support": 41.0
+    },
+    {
+      "class": "Honda Accord Coupe 2012",
+      "precision": 0.2105,
+      "recall": 0.1026,
+      "f1-score": 0.1379,
+      "support": 39.0
+    },
+    {
+      "class": "Honda Accord Sedan 2012",
+      "precision": 0.15,
+      "recall": 0.0789,
+      "f1-score": 0.1034,
+      "support": 38.0
+    },
+    {
+      "class": "Hyundai Veloster Hatchback 2012",
+      "precision": 0.0851,
+      "recall": 0.0976,
+      "f1-score": 0.0909,
+      "support": 41.0
+    },
+    {
+      "class": "Hyundai Santa Fe SUV 2012",
+      "precision": 0.2,
+      "recall": 0.1667,
+      "f1-score": 0.1818,
+      "support": 42.0
+    },
+    {
+      "class": "Hyundai Tucson SUV 2012",
+      "precision": 0.125,
+      "recall": 0.1395,
+      "f1-score": 0.1319,
+      "support": 43.0
+    },
+    {
+      "class": "Hyundai Veracruz SUV 2012",
+      "precision": 0.1316,
+      "recall": 0.119,
+      "f1-score": 0.125,
+      "support": 42.0
+    },
+    {
+      "class": "Hyundai Sonata Hybrid Sedan 2012",
+      "precision": 0.2273,
+      "recall": 0.1515,
+      "f1-score": 0.1818,
+      "support": 33.0
+    },
+    {
+      "class": "Hyundai Elantra Sedan 2007",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 42.0
+    },
+    {
+      "class": "Hyundai Accent Sedan 2012",
+      "precision": 0.3333,
+      "recall": 0.0833,
+      "f1-score": 0.1333,
+      "support": 24.0
+    },
+    {
+      "class": "Hyundai Genesis Sedan 2012",
+      "precision": 0.087,
+      "recall": 0.0465,
+      "f1-score": 0.0606,
+      "support": 43.0
+    },
+    {
+      "class": "Hyundai Sonata Sedan 2012",
+      "precision": 0.2353,
+      "recall": 0.4103,
+      "f1-score": 0.2991,
+      "support": 39.0
+    },
+    {
+      "class": "Hyundai Elantra Touring Hatchback 2012",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 42.0
+    },
+    {
+      "class": "Hyundai Azera Sedan 2012",
+      "precision": 0.1818,
+      "recall": 0.0952,
+      "f1-score": 0.125,
+      "support": 42.0
+    },
+    {
+      "class": "Infiniti G Coupe IPL 2012",
+      "precision": 0.2222,
+      "recall": 0.0588,
+      "f1-score": 0.093,
+      "support": 34.0
+    },
+    {
+      "class": "Infiniti QX56 SUV 2011",
+      "precision": 0.2619,
+      "recall": 0.3438,
+      "f1-score": 0.2973,
+      "support": 32.0
+    },
+    {
+      "class": "Isuzu Ascender SUV 2008",
+      "precision": 0.0385,
+      "recall": 0.025,
+      "f1-score": 0.0303,
+      "support": 40.0
+    },
+    {
+      "class": "Jaguar XK XKR 2012",
+      "precision": 0.1154,
+      "recall": 0.0652,
+      "f1-score": 0.0833,
+      "support": 46.0
+    },
+    {
+      "class": "Jeep Patriot SUV 2012",
+      "precision": 0.1017,
+      "recall": 0.1364,
+      "f1-score": 0.1165,
+      "support": 44.0
+    },
+    {
+      "class": "Jeep Wrangler SUV 2012",
+      "precision": 0.2386,
+      "recall": 0.4884,
+      "f1-score": 0.3206,
+      "support": 43.0
+    },
+    {
+      "class": "Jeep Liberty SUV 2012",
+      "precision": 0.1176,
+      "recall": 0.1364,
+      "f1-score": 0.1263,
+      "support": 44.0
+    },
+    {
+      "class": "Jeep Grand Cherokee SUV 2012",
+      "precision": 0.0625,
+      "recall": 0.0222,
+      "f1-score": 0.0328,
+      "support": 45.0
+    },
+    {
+      "class": "Jeep Compass SUV 2012",
+      "precision": 0.3,
+      "recall": 0.2857,
+      "f1-score": 0.2927,
+      "support": 42.0
+    },
+    {
+      "class": "Lamborghini Reventon Coupe 2008",
+      "precision": 0.24,
+      "recall": 0.3333,
+      "f1-score": 0.2791,
+      "support": 36.0
+    },
+    {
+      "class": "Lamborghini Aventador Coupe 2012",
+      "precision": 0.1486,
+      "recall": 0.2558,
+      "f1-score": 0.188,
+      "support": 43.0
+    },
+    {
+      "class": "Lamborghini Gallardo LP 570-4 Superleggera 2012",
+      "precision": 0.1765,
+      "recall": 0.3429,
+      "f1-score": 0.233,
+      "support": 35.0
+    },
+    {
+      "class": "Lamborghini Diablo Coupe 2001",
+      "precision": 0.2198,
+      "recall": 0.4545,
+      "f1-score": 0.2963,
+      "support": 44.0
+    },
+    {
+      "class": "Land Rover Range Rover SUV 2012",
+      "precision": 0.2885,
+      "recall": 0.3571,
+      "f1-score": 0.3191,
+      "support": 42.0
+    },
+    {
+      "class": "Land Rover LR2 SUV 2012",
+      "precision": 0.1143,
+      "recall": 0.0952,
+      "f1-score": 0.1039,
+      "support": 42.0
+    },
+    {
+      "class": "Lincoln Town Car Sedan 2011",
+      "precision": 0.2727,
+      "recall": 0.1538,
+      "f1-score": 0.1967,
+      "support": 39.0
+    },
+    {
+      "class": "MINI Cooper Roadster Convertible 2012",
+      "precision": 0.2462,
+      "recall": 0.4444,
+      "f1-score": 0.3168,
+      "support": 36.0
+    },
+    {
+      "class": "Maybach Landaulet Convertible 2012",
+      "precision": 0.05,
+      "recall": 0.0345,
+      "f1-score": 0.0408,
+      "support": 29.0
+    },
+    {
+      "class": "Mazda Tribute SUV 2011",
+      "precision": 0.1212,
+      "recall": 0.1111,
+      "f1-score": 0.1159,
+      "support": 36.0
+    },
+    {
+      "class": "McLaren MP4-12C Coupe 2012",
+      "precision": 0.1452,
+      "recall": 0.2045,
+      "f1-score": 0.1698,
+      "support": 44.0
+    },
+    {
+      "class": "Mercedes-Benz 300-Class Convertible 1993",
+      "precision": 0.2391,
+      "recall": 0.2292,
+      "f1-score": 0.234,
+      "support": 48.0
+    },
+    {
+      "class": "Mercedes-Benz C-Class Sedan 2012",
+      "precision": 0.2222,
+      "recall": 0.1778,
+      "f1-score": 0.1975,
+      "support": 45.0
+    },
+    {
+      "class": "Mercedes-Benz SL-Class Coupe 2009",
+      "precision": 0.08,
+      "recall": 0.0556,
+      "f1-score": 0.0656,
+      "support": 36.0
+    },
+    {
+      "class": "Mercedes-Benz E-Class Sedan 2012",
+      "precision": 0.1556,
+      "recall": 0.1628,
+      "f1-score": 0.1591,
+      "support": 43.0
+    },
+    {
+      "class": "Mercedes-Benz S-Class Sedan 2012",
+      "precision": 0.1034,
+      "recall": 0.0682,
+      "f1-score": 0.0822,
+      "support": 44.0
+    },
+    {
+      "class": "Mercedes-Benz Sprinter Van 2012",
+      "precision": 0.3333,
+      "recall": 0.6098,
+      "f1-score": 0.431,
+      "support": 41.0
+    },
+    {
+      "class": "Mitsubishi Lancer Sedan 2012",
+      "precision": 0.1429,
+      "recall": 0.0426,
+      "f1-score": 0.0656,
+      "support": 47.0
+    },
+    {
+      "class": "Nissan Leaf Hatchback 2012",
+      "precision": 0.25,
+      "recall": 0.381,
+      "f1-score": 0.3019,
+      "support": 42.0
+    },
+    {
+      "class": "Nissan NV Passenger Van 2012",
+      "precision": 0.1833,
+      "recall": 0.2895,
+      "f1-score": 0.2245,
+      "support": 38.0
+    },
+    {
+      "class": "Nissan Juke Hatchback 2012",
+      "precision": 0.1143,
+      "recall": 0.0909,
+      "f1-score": 0.1013,
+      "support": 44.0
+    },
+    {
+      "class": "Nissan 240SX Coupe 1998",
+      "precision": 0.1154,
+      "recall": 0.1304,
+      "f1-score": 0.1224,
+      "support": 46.0
+    },
+    {
+      "class": "Plymouth Neon Coupe 1999",
+      "precision": 0.1642,
+      "recall": 0.25,
+      "f1-score": 0.1982,
+      "support": 44.0
+    },
+    {
+      "class": "Porsche Panamera Sedan 2012",
+      "precision": 0.1837,
+      "recall": 0.2093,
+      "f1-score": 0.1957,
+      "support": 43.0
+    },
+    {
+      "class": "Ram C/V Cargo Van Minivan 2012",
+      "precision": 0.1875,
+      "recall": 0.2927,
+      "f1-score": 0.2286,
+      "support": 41.0
+    },
+    {
+      "class": "Rolls-Royce Phantom Drophead Coupe Convertible 2012",
+      "precision": 0.4091,
+      "recall": 0.3,
+      "f1-score": 0.3462,
+      "support": 30.0
+    },
+    {
+      "class": "Rolls-Royce Ghost Sedan 2012",
+      "precision": 0.1957,
+      "recall": 0.2368,
+      "f1-score": 0.2143,
+      "support": 38.0
+    },
+    {
+      "class": "Rolls-Royce Phantom Sedan 2012",
+      "precision": 0.1667,
+      "recall": 0.25,
+      "f1-score": 0.2,
+      "support": 44.0
+    },
+    {
+      "class": "Scion xD Hatchback 2012",
+      "precision": 0.0455,
+      "recall": 0.0488,
+      "f1-score": 0.0471,
+      "support": 41.0
+    },
+    {
+      "class": "Spyker C8 Convertible 2009",
+      "precision": 0.1341,
+      "recall": 0.2444,
+      "f1-score": 0.1732,
+      "support": 45.0
+    },
+    {
+      "class": "Spyker C8 Coupe 2009",
+      "precision": 0.16,
+      "recall": 0.1905,
+      "f1-score": 0.1739,
+      "support": 42.0
+    },
+    {
+      "class": "Suzuki Aerio Sedan 2007",
+      "precision": 0.125,
+      "recall": 0.0526,
+      "f1-score": 0.0741,
+      "support": 38.0
+    },
+    {
+      "class": "Suzuki Kizashi Sedan 2012",
+      "precision": 0.0588,
+      "recall": 0.0217,
+      "f1-score": 0.0317,
+      "support": 46.0
+    },
+    {
+      "class": "Suzuki SX4 Hatchback 2012",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 42.0
+    },
+    {
+      "class": "Suzuki SX4 Sedan 2012",
+      "precision": 0.0612,
+      "recall": 0.075,
+      "f1-score": 0.0674,
+      "support": 40.0
+    },
+    {
+      "class": "Tesla Model S Sedan 2012",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 38.0
+    },
+    {
+      "class": "Toyota Sequoia SUV 2012",
+      "precision": 0.1714,
+      "recall": 0.1579,
+      "f1-score": 0.1644,
+      "support": 38.0
+    },
+    {
+      "class": "Toyota Camry Sedan 2012",
+      "precision": 0.0714,
+      "recall": 0.0233,
+      "f1-score": 0.0351,
+      "support": 43.0
+    },
+    {
+      "class": "Toyota Corolla Sedan 2012",
+      "precision": 0.1,
+      "recall": 0.0465,
+      "f1-score": 0.0635,
+      "support": 43.0
+    },
+    {
+      "class": "Toyota 4Runner SUV 2012",
+      "precision": 0.2667,
+      "recall": 0.4,
+      "f1-score": 0.32,
+      "support": 40.0
+    },
+    {
+      "class": "Volkswagen Golf Hatchback 2012",
+      "precision": 0.2083,
+      "recall": 0.1163,
+      "f1-score": 0.1493,
+      "support": 43.0
+    },
+    {
+      "class": "Volkswagen Golf Hatchback 1991",
+      "precision": 0.1429,
+      "recall": 0.1957,
+      "f1-score": 0.1651,
+      "support": 46.0
+    },
+    {
+      "class": "Volkswagen Beetle Hatchback 2012",
+      "precision": 0.1084,
+      "recall": 0.2143,
+      "f1-score": 0.144,
+      "support": 42.0
+    },
+    {
+      "class": "Volvo C30 Hatchback 2012",
+      "precision": 0.0714,
+      "recall": 0.0244,
+      "f1-score": 0.0364,
+      "support": 41.0
+    },
+    {
+      "class": "Volvo 240 Sedan 1993",
+      "precision": 0.2133,
+      "recall": 0.3556,
+      "f1-score": 0.2667,
+      "support": 45.0
+    },
+    {
+      "class": "Volvo XC90 SUV 2007",
+      "precision": 0.1786,
+      "recall": 0.1163,
+      "f1-score": 0.1408,
+      "support": 43.0
+    },
+    {
+      "class": "smart fortwo Convertible 2012",
+      "precision": 0.2526,
+      "recall": 0.6,
+      "f1-score": 0.3556,
+      "support": 40.0
+    }
+  ]
+}

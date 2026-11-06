@@ -249,3 +249,59 @@ describe('adaptMetrics with both of Person A files in one document', () => {
     expect(adaptMetrics(wire({ test: { top1: 'high', top5: 'higher' } })).classifier).toBe('not available')
   })
 })
+
+// Person B's eval_P5_metrics.json is the file the backend serves first. It is already in the page's own format
+// (every section is {source, generated_at, data}). The images in the fixture are shortened.
+import personBFile from './fixtures/person_b_app_metrics.json'
+
+describe("adaptMetrics with Person B's eval_P5_metrics.json", () => {
+  const result = adaptMetrics(wire(personBFile))
+
+  it('uses every section the file has, as it is', () => {
+    expect(available<{ top1: number }>(result.classifier).data.top1).toBeCloseTo(0.92202, 4)
+    const detection = available<{ rows: { mean_iou: number; map: number; model: string }[] }>(result.detection).data.rows
+    expect(detection).toHaveLength(2)
+    expect(detection[0].mean_iou).toBeCloseTo(0.9314, 3)
+    expect(available<{ rows: unknown[] }>(result.comparison).data.rows).toHaveLength(2)
+    expect(available<{ rows: unknown[] }>(result.ablation).data.rows).toHaveLength(4)
+    expect(available<{ rows: unknown[] }>(result.confused_pairs).data.rows).toHaveLength(15)
+    expect(available<{ cases: unknown[] }>(result.failure_cases).data.cases).toHaveLength(5)
+  })
+  it('keeps the source file named on each section', () => {
+    expect(available(result.comparison).source).toBe('results/classical_baseline.json')
+    expect(available(result.detection).source).toContain('detector_resnet50')
+  })
+  it("gives the notebook's variant keys readable names", () => {
+    const rows = available<{ rows: { variant: string }[] }>(result.optimisation).data.rows
+    expect(rows[0].variant).toBe('PyTorch FP32')
+    expect(rows.map((r) => r.variant)).not.toContain('pytorch_fp32')
+  })
+  it('keeps a section the file says is not available as not available', () => {
+    expect(result.robustness).toBe('not available')
+  })
+})
+
+describe("adaptClassical with Person B's format", () => {
+  const native = {
+    steps: [
+      { key: 'original', title: 'Original', image: 'data:image/jpeg;base64,AAAA', caption: 'The photo, resized for analysis.' },
+      { key: 'hog', title: 'HOG', image: 'data:image/jpeg;base64,BBBB', caption: 'Edge directions.' },
+      { key: 'broken', title: 'No image here' },
+    ],
+    features: { aspect_ratio: 1.8, hu_moments: [0.2, 0.01], low_light: 'no', mean_brightness: 112.5 },
+    timings_ms: { total: 88.1 },
+  }
+
+  it('passes the stages and features straight through', () => {
+    const result = adaptClassical(native)
+    expect(result.steps.map((s) => s.key)).toEqual(['original', 'hog'])
+    expect(result.steps[0].caption).toBe('The photo, resized for analysis.')
+    expect(result.features).toEqual(native.features)
+    expect(result.timings_ms).toEqual({ total: 88.1 })
+  })
+  it("still reads Person C's format", () => {
+    const result = adaptClassical({ intermediate_images: { clahe: 'data:a' }, features: { geometric: { aspect_ratio: 2 } } })
+    expect(result.steps[0].title).toBe('CLAHE')
+    expect(result.features).toEqual({ aspect_ratio: 2 })
+  })
+})

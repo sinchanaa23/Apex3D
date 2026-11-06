@@ -7,6 +7,7 @@ import type {
   JobStatus,
   MaybeSection,
   MetricsResponse,
+  OptimisationMetrics,
   RecognizeResponse,
   Reference,
   ReferencesResponse,
@@ -68,7 +69,26 @@ export interface WireClassical {
   timings_ms?: Record<string, number>
 }
 
-export function adaptClassical(wire: WireClassical): ClassicalResponse {
+/** Person B's backend/classical_cv/api.py returns the page's own format, so it passes straight through. */
+interface NativeClassical {
+  steps: { key?: unknown; title?: unknown; image?: unknown; caption?: unknown }[]
+  features?: Record<string, number | string | number[]>
+  timings_ms?: Record<string, number>
+}
+
+export function adaptClassical(wire: WireClassical | NativeClassical): ClassicalResponse {
+  if ('steps' in wire && Array.isArray(wire.steps)) {
+    return {
+      steps: wire.steps.flatMap((step) =>
+        typeof step.key === 'string' && typeof step.title === 'string' && typeof step.image === 'string'
+          ? [{ key: step.key, title: step.title, image: step.image, caption: typeof step.caption === 'string' ? step.caption : null }]
+          : [],
+      ),
+      features: wire.features ?? {},
+      timings_ms: wire.timings_ms,
+    }
+  }
+  wire = wire as WireClassical
   const features: ClassicalResponse['features'] = {}
   for (const [group, values] of Object.entries(wire.features)) {
     const prefix = FEATURE_PREFIX[group] ?? `${group}_`
@@ -338,6 +358,10 @@ function top1Entries(value: unknown) {
 /** A notebook may also save the fuller `{rows: [...]}` form, which the charts can use. */
 const hasRows = (value: unknown) => isRecord(value) && Array.isArray(value.rows)
 
+/** A section that is already `{source, generated_at, data}`, as Person B's eval_P5_metrics.json writes them. */
+const isNativeSection = (value: unknown): value is { source: string; generated_at?: string | null; data: Record<string, unknown> } =>
+  isRecord(value) && typeof value.source === 'string' && isRecord(value.data)
+
 export function adaptMetrics(wire: WireMetrics): MetricsResponse {
   const m = wire.metrics
   if (wire.status !== 'available' || !isRecord(m)) return { message: wire.message }
@@ -377,26 +401,51 @@ export function adaptMetrics(wire: WireMetrics): MetricsResponse {
       }
     : null
 
+  /** A native section from the file wins. Otherwise use what was worked out from the other formats. */
+  const prefer = <T,>(key: string, computed: MaybeSection<T>): MaybeSection<T> => (isNativeSection(m[key]) ? (m[key] as unknown as MaybeSection<T>) : computed)
+  /** Gives optimisation rows readable names when the file uses the notebook's keys, such as onnx_int8_dynamic. */
+  const nativeOptimisation = (): MaybeSection<OptimisationMetrics> => {
+    const native = m.optimisation
+    if (!isNativeSection(native) || !Array.isArray(native.data.rows)) return 'not available'
+    const rows = (native.data.rows as { variant?: unknown }[]).map((row) => (typeof row.variant === 'string' && VARIANT_NAMES[row.variant] ? { ...row, variant: VARIANT_NAMES[row.variant] } : row))
+    return { ...native, data: { ...native.data, rows } } as unknown as MaybeSection<OptimisationMetrics>
+  }
+
   return {
-    classifier: flatClassifier ? section(flatClassifier) : classifierDoc ? sectionFrom(classifierDoc, classifierFromDoc(classifierDoc)) : 'not available',
-    detection: section(
-      isNumber(m.detector_mean_iou) && isNumber(m.detector_mAP50)
-        ? { rows: [{ model: typeof m.detector_name === 'string' ? m.detector_name : 'Detector', mean_iou: m.detector_mean_iou, map: m.detector_mAP50 }] }
-        : null,
+    classifier: prefer('classifier', flatClassifier ? section(flatClassifier) : classifierDoc ? sectionFrom(classifierDoc, classifierFromDoc(classifierDoc)) : 'not available'),
+    detection: prefer(
+      'detection',
+      section(
+        isNumber(m.detector_mean_iou) && isNumber(m.detector_mAP50)
+          ? { rows: [{ model: typeof m.detector_name === 'string' ? m.detector_name : 'Detector', mean_iou: m.detector_mean_iou, map: m.detector_mAP50 }] }
+          : null,
+      ),
     ),
-    optimisation: flatOptimisation ? section(flatOptimisation) : optimisationDoc ? sectionFrom(optimisationDoc, optimisationFromDoc(optimisationDoc)) : 'not available',
+    optimisation: isNativeSection(m.optimisation)
+      ? nativeOptimisation()
+      : flatOptimisation
+        ? section(flatOptimisation)
+        : optimisationDoc
+          ? sectionFrom(optimisationDoc, optimisationFromDoc(optimisationDoc))
+          : 'not available',
     run: sectionFrom(classifierDoc, classifierDoc ? runFromDoc(classifierDoc) : null),
     calibration: sectionFrom(classifierDoc, classifierDoc ? calibrationFromDoc(classifierDoc) : null),
     states: sectionFrom(classifierDoc, classifierDoc ? statesFromDoc(classifierDoc) : null),
-    robustness: hasRows(m.robustness)
-      ? passThrough(m.robustness)
-      : section(robustness.length ? { rows: robustness.map(({ name, top1 }) => ({ perturbation: name, severity: null, top1 })) } : null),
-    comparison: hasRows(m.comparison)
-      ? passThrough(m.comparison)
-      : section(comparison.length ? { rows: comparison.map(({ name, top1 }) => ({ approach: humanise(name), top1 })) } : null),
-    confidence: passThrough(m.confidence),
-    ablation: passThrough(m.ablation),
-    confused_pairs: passThrough(m.confused_pairs),
-    failure_cases: passThrough(m.failure_cases),
+    robustness: prefer(
+      'robustness',
+      hasRows(m.robustness)
+        ? passThrough(m.robustness)
+        : section(robustness.length ? { rows: robustness.map(({ name, top1 }) => ({ perturbation: name, severity: null, top1 })) } : null),
+    ),
+    comparison: prefer(
+      'comparison',
+      hasRows(m.comparison)
+        ? passThrough(m.comparison)
+        : section(comparison.length ? { rows: comparison.map(({ name, top1 }) => ({ approach: humanise(name), top1 })) } : null),
+    ),
+    confidence: prefer('confidence', passThrough(m.confidence)),
+    ablation: prefer('ablation', passThrough(m.ablation)),
+    confused_pairs: prefer('confused_pairs', passThrough(m.confused_pairs)),
+    failure_cases: prefer('failure_cases', passThrough(m.failure_cases)),
   }
 }

@@ -89,3 +89,16 @@ third_party/
 cloudflared.exe
 *.log
 tools/
+
+# Person B evaluation caches and local tooling
+.claude/
+.pytest_cache/
+node_modules/
+dist/
+*.joblib
+*.npy
+*.npz
+*.parquet
+
+# The rule above is for datasets; this folder is source code
+!backend/data/
