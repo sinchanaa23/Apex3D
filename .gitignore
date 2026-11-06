@@ -24,26 +24,30 @@ wheels/
 *.egg
 
 # Jupyter Notebook checkpoints
-.ipynb_checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints
 
 # Environment variables & secrets
 .env
 .env.*
 !.env.example
 
-# Large ML files, checkpoints & weights (Rule: Keep dataset and weights out of git)
+# Large files: dataset, weights, checkpoints (share through team drive)
+data/
+datasets/
+data/stanford_cars/
+checkpoints/
+weights/
+artifacts/
+outputs/
 *.pt
 *.pth
+*.ckpt
 *.onnx
 *.bin
 *.safetensors
-*.ckpt
-weights/
-checkpoints/
-data/stanford_cars/
-datasets/
 
-# 3D assets & exports (Rule: Keep generated meshes out of git)
+# 3D assets & exports (generated meshes)
 *.glb
 *.obj
 *.stl
@@ -62,6 +66,12 @@ frontend/dist/
 frontend/.next/
 frontend/out/
 
+# Third-party clones & local tooling
+third_party/
+cloudflared.exe
+*.log
+tools/
+
 # OS specific
 .DS_Store
 Thumbs.db
@@ -74,4 +84,3 @@ desktop.ini
 .idea/
 *.sublime-project
 *.sublime-workspace
-

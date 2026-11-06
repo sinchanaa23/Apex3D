@@ -1,0 +1,106 @@
+{
+  "generated_by": "notebooks/01b_export_quantize.ipynb",
+  "generated_at": "2026-11-06 20:51:34",
+  "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+  "threads": 6,
+  "thread_sweep_fp32_ms": {
+    "0": 152.36,
+    "2": 55.91,
+    "4": 39.42,
+    "6": 37.3,
+    "8": 40.0
+  },
+  "onnxruntime": "1.31.1",
+  "calibration": {
+    "images": 256,
+    "source": "training split crops"
+  },
+  "val_images": 1222,
+  "test_images": 8041,
+  "variants": {
+    "pytorch_fp32": {
+      "size_mb": 111.95,
+      "val_top1": 0.9214402618657938,
+      "val_top5": 0.9885433715220949,
+      "test_top1": 0.9220246238030095,
+      "test_top5": 0.9842059445342619,
+      "agreement_with_pytorch_fp32": 1.0,
+      "cpu_latency_ms_b1": 49.2,
+      "eval_seconds": 286.4
+    },
+    "onnx_fp32": {
+      "size_mb": 111.96,
+      "val_top1": 0.9214402618657938,
+      "val_top5": 0.9885433715220949,
+      "test_top1": 0.9220246238030095,
+      "test_top5": 0.9842059445342619,
+      "agreement_with_pytorch_fp32": 1.0,
+      "cpu_latency_ms_b1": 34.33,
+      "eval_seconds": 323.7
+    },
+    "onnx_fp16": {
+      "size_mb": 56.05,
+      "val_top1": 0.9214402618657938,
+      "val_top5": 0.9885433715220949,
+      "test_top1": 0.9219002611615471,
+      "test_top5": 0.9842059445342619,
+      "agreement_with_pytorch_fp32": 0.9998756373585375,
+      "cpu_latency_ms_b1": 38.61,
+      "eval_seconds": 395.8
+    },
+    "onnx_int8_dynamic": {
+      "size_mb": 28.36,
+      "val_top1": 0.9222585924713584,
+      "val_top5": 0.986088379705401,
+      "test_top1": 0.9197860962566845,
+      "test_top5": 0.9844546698171869,
+      "agreement_with_pytorch_fp32": 0.9896779007586121,
+      "cpu_latency_ms_b1": 151.34,
+      "eval_seconds": 4043.4
+    },
+    "onnx_int8_static_all": {
+      "size_mb": 28.69,
+      "val_top1": 0.839607201309329,
+      "val_top5": 0.9664484451718495,
+      "test_top1": 0.8610869294863823,
+      "test_top5": 0.9665464494465863,
+      "agreement_with_pytorch_fp32": 0.8821042158935456,
+      "cpu_latency_ms_b1": 21.59,
+      "eval_seconds": 216.4
+    },
+    "onnx_int8_static_matmul": {
+      "size_mb": 34.59,
+      "val_top1": 0.9198036006546645,
+      "val_top5": 0.9885433715220949,
+      "test_top1": 0.9217758985200846,
+      "test_top5": 0.9850764830244995,
+      "agreement_with_pytorch_fp32": 0.9950254943414998,
+      "cpu_latency_ms_b1": 19.4,
+      "eval_seconds": 250.6
+    }
+  },
+  "summary": {
+    "onnx_int8_dynamic": {
+      "size_reduction_vs_onnx_fp32": 0.7466952483029654,
+      "speedup_vs_onnx_fp32": 0.226840227302762,
+      "top1_change_vs_onnx_fp32": -0.002238527546325031
+    },
+    "onnx_int8_static_all": {
+      "size_reduction_vs_onnx_fp32": 0.7437477670596642,
+      "speedup_vs_onnx_fp32": 1.590088003705419,
+      "top1_change_vs_onnx_fp32": -0.06093769431662721
+    },
+    "onnx_int8_static_matmul": {
+      "size_reduction_vs_onnx_fp32": 0.6910503751339764,
+      "speedup_vs_onnx_fp32": 1.7695876288659795,
+      "top1_change_vs_onnx_fp32": -0.00024872528292496643
+    },
+    "onnx_fp16": {
+      "size_reduction_vs_onnx_fp32": 0.4993747767059664,
+      "speedup_vs_onnx_fp32": 0.8891478891478891,
+      "top1_change_vs_onnx_fp32": -0.0001243626414624277
+    }
+  },
+  "deploy_variant": "onnx_int8_static_matmul",
+  "deploy_rule": "fastest ONNX variant with val Top-1 within 0.5 points of ONNX FP32 (chosen on validation)"
+}
