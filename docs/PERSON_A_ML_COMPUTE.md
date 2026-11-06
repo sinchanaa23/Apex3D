@@ -36,7 +36,7 @@ kaggle datasets download rickyyyyyyy/torchvision-stanford-cars -p data/raw --unz
 | Kaggle mirror `jessicali9530/stanford-cars-dataset` | `rickyyyyyyy/torchvision-stanford-cars` | The planned mirror returned 403 Forbidden on 2026-11-06. The new one has the same 16,185 images and includes `cars_test_annos_withlabels.mat`. Notebook 01 §2 and §4 verify the file counts and the test labels. |
 | TripoSR's `torchmcubes` (compiled C++/CUDA) | `backend/reconstruction/mcubes_shim.py` (scikit-image marching cubes) | Avoids a C++ build on Windows and on the backup laptop. `tests/test_reconstruction_shim.py` checks it against TripoSR's own helper on an analytic sphere: position, radius, watertightness and outward normals. |
 | rembg default background removal | rembg **`u2net`** model pinned explicitly | rembg 2.0.87 now defaults to BRIA RMBG-2.0, which is **CC BY-NC (non-commercial)** and a 1 GB download. u2net is Apache-2.0 and is the model TripoSR was released with. |
-| ONNX INT8 quantization | Dynamic **and** static (calibrated) INT8 compared | Measured on this CPU, dynamic INT8 was slower than FP32. Static INT8 is both faster and smaller. Calibration uses training-split crops only. |
+| ONNX INT8 quantization | Dynamic INT8, full static INT8 and **MatMul-only static INT8** compared; the deployed variant is chosen on validation | On this CPU, dynamic INT8 was about 4.6× *slower* than FP32. Full static INT8 lost about 6 points of Top-1 because ConvNeXt has large activation outliers. Quantizing only the pointwise MatMuls keeps accuracy and is still faster. Calibration uses training-split crops only. |
 
 ## 3. 3D reconstruction (TripoSR) — `backend/reconstruction/`
 
@@ -100,7 +100,24 @@ The notebook ran top to bottom on this laptop with every output saved (2026-11-0
 
 ## 5. Optimisation — `notebooks/01b_export_quantize.ipynb`
 
-Results are filled in from `results/optimization_metrics.json` after the run (see §7).
+Ran top to bottom with outputs saved. Source: `results/optimization_metrics.json`. CPU: i5-12500H, batch 1, 6 threads (fastest in the sweep; ONNX Runtime's default takes 152 ms because the efficiency cores slow every layer).
+
+| Variant | Size | Val Top-1 | Test Top-1 | Test Top-5 | CPU latency |
+|---|---|---|---|---|---|
+| PyTorch FP32 | 112.0 MB | 92.14% | 92.20% | 98.42% | 49.2 ms |
+| ONNX FP32 | 112.0 MB | 92.14% | 92.20% | 98.42% | 34.3 ms |
+| ONNX FP16 | 56.1 MB | 92.14% | 92.19% | 98.42% | 38.6 ms |
+| ONNX INT8 dynamic | 28.4 MB | 92.23% | 91.98% | 98.45% | 151.3 ms |
+| ONNX INT8 static, all layers | 28.7 MB | 83.96% | 86.11% | 96.65% | 21.6 ms |
+| **ONNX INT8 static, MatMul only (deployed)** | **34.6 MB** | **91.98%** | **92.18%** | **98.51%** | **19.4 ms** |
+
+**Deployed:** `checkpoints/apex3d_convnext_tiny_int8_static_matmul.onnx`. The rule was fixed in advance and applied on validation only: the fastest ONNX variant whose val Top-1 is within 0.5 points of ONNX FP32. Against ONNX FP32 it is **1.77× faster** (2.5× faster than PyTorch on the CPU), **69% smaller**, and loses **0.02 points** of test Top-1. Its predictions agree with PyTorch FP32 on 99.5% of test images.
+
+Two negative results we report rather than hide:
+- Dynamic INT8 is **4.4× slower** than ONNX FP32 on this CPU, because it re-quantizes large activations on every call.
+- Full static INT8 loses about 6 points, because of ConvNeXt's activation outliers.
+
+To run it in the app: create an `onnxruntime.InferenceSession` with `intra_op_num_threads=6`; input `"input"` (N×3×224×224 float32, preprocessed with `cls_lib.eval_transform`), output `"logits"`. Then divide by the bundle's `temperature` before applying softmax. Running recognition on the CPU leaves the GPU free for TripoSR.
 
 ## 6. GPU queue (Person A decides what runs)
 
@@ -116,6 +133,7 @@ Results are filled in from `results/optimization_metrics.json` after the run (se
 | To | What | Where |
 |---|---|---|
 | B, C | Checkpoint bundle: weights, architecture, input size, normalisation, class names, temperature, thresholds | `checkpoints/apex3d_convnext_tiny.pt` (team drive). Load with `notebooks/cls_lib.load_classifier` and predict with `cls_lib.predict_crop` |
+| C | Optimised CPU classifier (deployed variant, §5) | `checkpoints/apex3d_convnext_tiny_int8_static_matmul.onnx` (team drive) |
 | B, C | Class list with parsed make / model / year | `results/class_names.json` |
 | B | Exact train/val split used for every model | `results/split.json` |
 | B | Logits and 768-d embeddings for train/val/test | `artifacts/logits_*.npz`, `artifacts/embeddings_*.npz` (team drive) |

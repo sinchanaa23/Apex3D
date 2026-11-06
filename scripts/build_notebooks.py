@@ -621,9 +621,10 @@ r"""md:## Reduced-precision and INT8 variants
 
 - **FP16:** weights and activations in half precision (`onnxconverter-common`), the proposal's fallback.
 - **INT8 dynamic:** MatMul/Gemm weights stored as 8-bit integers, activations quantized on the fly at run time. No calibration data needed.
-- **INT8 static (QDQ):** weights *and* activations in INT8, per-channel weight scales, with activation ranges calibrated on 256 crops from the **training split** (never validation or test).
+- **INT8 static (QDQ), all layers:** weights *and* activations in INT8, per-channel weight scales, with activation ranges calibrated (min-max) on 256 crops from the **training split**.
+- **INT8 static (QDQ), MatMul only:** the same, but only the pointwise MLP MatMuls (most of the compute and parameters) are quantized. The depthwise 7×7 convolutions, downsampling layers and classifier stay FP32. ConvNeXt has large activation outliers that min-max calibration handles badly in the other layers.
 
-LayerNorm and GELU stay in floating point in every variant.""",
+LayerNorm and GELU stay in floating point in every variant. The variant the app should deploy is chosen on **validation** (next sections), never on test.""",
 r"""
 from onnxruntime.quantization import quantize_dynamic, quantize_static, QuantType, QuantFormat, CalibrationDataReader
 from onnxruntime.quantization.shape_inference import quant_pre_process
@@ -642,9 +643,12 @@ class TrainCalib(CalibrationDataReader):
     def get_next(self):
         p = next(self.it, None)
         return None if p is None else {"input": clf.transform(Image.open(p).convert("RGB")).unsqueeze(0).numpy()}
-int8_static_path = OUT / "apex3d_convnext_tiny_int8_static.onnx"
+int8_static_path = OUT / "apex3d_convnext_tiny_int8_static_all.onnx"
 quantize_static(str(pre_path), str(int8_static_path), TrainCalib(), quant_format=QuantFormat.QDQ, per_channel=True,
                 activation_type=QuantType.QUInt8, weight_type=QuantType.QInt8)
+int8_mm_path = OUT / "apex3d_convnext_tiny_int8_static_matmul.onnx"
+quantize_static(str(pre_path), str(int8_mm_path), TrainCalib(), quant_format=QuantFormat.QDQ, per_channel=True,
+                activation_type=QuantType.QUInt8, weight_type=QuantType.QInt8, op_types_to_quantize=["MatMul"])
 pre_path.unlink()
 
 import warnings
@@ -657,7 +661,7 @@ try:
     ort.InferenceSession(str(fp16_path), providers=["CPUExecutionProvider"])   # loads on this CPU?
 except Exception as e:                       # reported, not hidden: the table will lack FP16
     print("FP16 variant unavailable on this runtime:", e); fp16_path = None
-for p in (fp32_path, fp16_path, int8_dyn_path, int8_static_path):
+for p in (fp32_path, fp16_path, int8_dyn_path, int8_static_path, int8_mm_path):
     if p: print(f"{p.name}: {p.stat().st_size/1e6:.1f} MB")
 """,
 r"""md:## CPU thread count
@@ -681,30 +685,39 @@ THREADS = min((k for k in sweep if k), key=sweep.get)
 torch.set_num_threads(THREADS)
 print("using", THREADS, "threads")
 """,
-r"""md:## Accuracy on the full test set and CPU latency""",
-r"""
-def batches(bs=64):
-    for i in range(0, len(te_paths), bs):
-        yield np.stack([clf.transform(Image.open(p).convert("RGB")).numpy() for p in te_paths[i:i + bs]])
+r"""md:## Accuracy (validation and full test set) and CPU latency
 
-def evaluate(run):
-    logits = np.concatenate([run(xb) for xb in batches()])
+Validation (1,222 images) is used to choose the variant for the app. Test (8,041 images) is reported for every variant, once.""",
+r"""
+train_lab = {Path(r.path).name: r.label for r in L.load_split(L.find_stanford_root(Path(os.environ.get("APEX3D_DATA", REPO / "data" / "raw"))), "train")}
+va_files = [f for f in split["val"] if (CACHE / ("cars_train_" + Path(f).stem + ".jpg")).exists()]
+va_paths = [str(CACHE / ("cars_train_" + Path(f).stem + ".jpg")) for f in va_files]
+va_y = np.array([train_lab[f] for f in va_files])
+
+def batches(paths, bs=64):
+    for i in range(0, len(paths), bs):
+        yield np.stack([clf.transform(Image.open(p).convert("RGB")).numpy() for p in paths[i:i + bs]])
+
+def evaluate(run, paths, ys):
+    logits = np.concatenate([run(xb) for xb in batches(paths)])
     top5 = np.argsort(-logits, 1)[:, :5]
-    return logits, float((top5[:, 0] == te_y).mean()), float((top5 == te_y[:, None]).any(1).mean())
+    return logits, float((top5[:, 0] == ys).mean()), float((top5 == ys[:, None]).any(1).mean())
 
 variants = {"pytorch_fp32": (lambda xb: clf.model(torch.from_numpy(xb)).detach().numpy(), BUNDLE)}
-for name, path in (("onnx_fp32", fp32_path), ("onnx_fp16", fp16_path), ("onnx_int8_dynamic", int8_dyn_path), ("onnx_int8_static", int8_static_path)):
+for name, path in (("onnx_fp32", fp32_path), ("onnx_fp16", fp16_path), ("onnx_int8_dynamic", int8_dyn_path),
+                   ("onnx_int8_static_all", int8_static_path), ("onnx_int8_static_matmul", int8_mm_path)):
     if path is None: continue
     variants[name] = ((lambda s: lambda xb: s.run(None, {"input": xb})[0])(session(path, THREADS)), path)
 
 rows, ref_pred = {}, None
 for name, (run, path) in variants.items():
     with torch.no_grad():
-        t0 = time.time(); logits, t1, t5 = evaluate(run); ev_s = time.time() - t0
+        _, v1, v5 = evaluate(run, va_paths, va_y)
+        t0 = time.time(); logits, t1, t5 = evaluate(run, te_paths, te_y); ev_s = time.time() - t0
         lat = latency(run)
     pred = logits.argmax(1)
     if ref_pred is None: ref_pred = pred
-    rows[name] = {"size_mb": round(path.stat().st_size / 1e6, 2), "test_top1": t1, "test_top5": t5,
+    rows[name] = {"size_mb": round(path.stat().st_size / 1e6, 2), "val_top1": v1, "val_top5": v5, "test_top1": t1, "test_top5": t5,
                   "agreement_with_pytorch_fp32": float((pred == ref_pred).mean()), "cpu_latency_ms_b1": round(lat, 2), "eval_seconds": round(ev_s, 1)}
     print(name, rows[name], flush=True)
 """,
@@ -713,15 +726,21 @@ import pandas as pd
 df = pd.DataFrame(rows).T; display(df)
 base = rows["onnx_fp32"]
 summary = {}
-for q in [v for v in ("onnx_int8_dynamic", "onnx_int8_static", "onnx_fp16") if v in rows]:
+for q in [v for v in ("onnx_int8_dynamic", "onnx_int8_static_all", "onnx_int8_static_matmul", "onnx_fp16") if v in rows]:
     summary[q] = {"size_reduction_vs_onnx_fp32": 1 - rows[q]["size_mb"] / base["size_mb"],
                   "speedup_vs_onnx_fp32": base["cpu_latency_ms_b1"] / rows[q]["cpu_latency_ms_b1"],
                   "top1_change_vs_onnx_fp32": rows[q]["test_top1"] - base["test_top1"]}
     print(q, {k: round(v, 4) for k, v in summary[q].items()})
+
+# Deployment choice, on VALIDATION only: the fastest ONNX variant within 0.5 points of ONNX FP32 val Top-1.
+eligible = [k for k in rows if k.startswith("onnx") and rows[k]["val_top1"] >= base["val_top1"] - 0.005]
+DEPLOY = min(eligible, key=lambda k: rows[k]["cpu_latency_ms_b1"])
+print("deploy for CPU recognition:", DEPLOY, rows[DEPLOY])
 out = {"generated_by": "notebooks/01b_export_quantize.ipynb", "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
        "cpu": os.environ.get("PROCESSOR_IDENTIFIER", ""), "threads": THREADS, "thread_sweep_fp32_ms": sweep, "onnxruntime": ort.__version__,
        "calibration": {"images": len(calib_files), "source": "training split crops"},
-       "test_images": int(len(te_y)), "variants": rows, "summary": summary}
+       "val_images": int(len(va_y)), "test_images": int(len(te_y)), "variants": rows, "summary": summary,
+       "deploy_variant": DEPLOY, "deploy_rule": "fastest ONNX variant with val Top-1 within 0.5 points of ONNX FP32 (chosen on validation)"}
 (RESULTS / "optimization_metrics.json").write_text(json.dumps(out, indent=2))
 print("saved results/optimization_metrics.json")
 """,
