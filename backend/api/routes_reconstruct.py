@@ -36,6 +36,14 @@ MIME_TYPE_MAP = {
 }
 
 
+def _class_name(class_id) -> Optional[str]:
+    from backend.data.stanford_cars_classes import STANFORD_CARS_CLASSES
+
+    if isinstance(class_id, int) and 0 <= class_id < len(STANFORD_CARS_CLASSES):
+        return STANFORD_CARS_CLASSES[class_id]
+    return None
+
+
 def _enqueued(job: dict) -> dict:
     return {
         "job_id": job["id"],
@@ -151,6 +159,7 @@ async def get_job_status(id: str):
         validation=job.get("validation"),
         mesh_source=(job.get("options") or {}).get("mesh_source"),
         class_id=(job.get("options") or {}).get("class_id"),
+        class_name=_class_name((job.get("options") or {}).get("class_id")),
     )
 
 
