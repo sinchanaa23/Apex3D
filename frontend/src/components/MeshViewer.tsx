@@ -1,52 +1,116 @@
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useLoader, useThree } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
-import { Grid3x3, RotateCcw } from 'lucide-react'
-import { Box3, DoubleSide, Mesh, MeshStandardMaterial, Vector3, type Material } from 'three'
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
+import { ContactShadows, Environment, Lightformer, OrbitControls } from '@react-three/drei'
+import { useReducedMotion } from 'framer-motion'
+import { Grid3x3, RotateCcw, Sparkles } from 'lucide-react'
+import { Box3, DoubleSide, EdgesGeometry, LineSegments, Mesh, MeshPhysicalMaterial, MeshStandardMaterial, Vector3, type Material } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Spinner } from './States'
+import { createEdgeMaterial, createFloorMaterial, createHoloUniforms, patchSurface, type HoloUniforms } from './hero/shaders'
 
-const TARGET_SIZE = 2
-const START_POSITION: [number, number, number] = [2.4, 1.3, 2.8]
+/** The same size the hero car is drawn at, so the contour grid and floor look the same here. */
+const TARGET_SIZE = 4.4
+const START_POSITION: [number, number, number] = [5.2, 2.6, 6.6]
+const SCAN_PERIOD = 5.5
+const PULSE_PERIOD = 8.5
+const PULSE_LENGTH = 2.8
+/** Edge lines on a very dense mesh cost more than they add. */
+const MAX_EDGE_FACES = 300_000
 
-function Model({ url, wireframe, onReady }: { url: string; wireframe: boolean; onReady(): void }) {
+type Look = 'holo' | 'natural'
+
+function Model({ url, look, wireframe, uniforms, reducedMotion, onReady }: { url: string; look: Look; wireframe: boolean; uniforms: HoloUniforms; reducedMotion: boolean; onReady(): void }) {
   const { scene } = useLoader(GLTFLoader, url)
   const invalidate = useThree((state) => state.invalidate)
 
   // Fits any mesh into the same view. Display only: TripoSR's output has no real-world scale.
-  const { scale, offset, floor } = useMemo(() => {
+  const { scale, offset, floor, height } = useMemo(() => {
     const box = new Box3().setFromObject(scene)
     const size = box.getSize(new Vector3())
     const center = box.getCenter(new Vector3())
     const fit = TARGET_SIZE / Math.max(size.x, size.y, size.z, Number.EPSILON)
-    return { scale: fit, offset: center.multiplyScalar(-1), floor: (-size.y * fit) / 2 }
+    return { scale: fit, offset: center.multiplyScalar(-1), floor: (-size.y * fit) / 2, height: size.y * fit }
   }, [scene])
 
-  const materials = useMemo(() => {
-    const found = new Set<Material>()
+  const meshes = useMemo(() => {
+    const found: Mesh[] = []
     scene.traverse((node) => {
       if (node instanceof Mesh) {
-        const list = Array.isArray(node.material) ? node.material : [node.material]
-        list.forEach((material: Material) => found.add(material))
+        // Generated meshes often have no normals. Without them the surface shader cannot compile and three.js falls back to flat shading.
+        if (!node.geometry.attributes.normal) node.geometry.computeVertexNormals()
+        found.push(node)
       }
     })
-    return [...found]
+    return found
   }, [scene])
 
+  // The file's own materials, kept so "Natural" can bring them back.
+  const originals = useMemo(() => new Map(meshes.map((mesh) => [mesh, mesh.material as Material | Material[]])), [meshes])
+
+  const holoMaterial = useMemo(() => {
+    const material = new MeshPhysicalMaterial({ color: '#1a1512', metalness: 0.85, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.12, envMapIntensity: 1.2, side: DoubleSide })
+    patchSurface(material, uniforms, { grid: 1, rim: 1 })
+    return material
+  }, [uniforms])
+
+  const edges = useMemo(() => {
+    const faces = meshes.reduce((sum, mesh) => sum + (mesh.geometry.index ? mesh.geometry.index.count / 3 : mesh.geometry.attributes.position.count / 3), 0)
+    if (faces > MAX_EDGE_FACES) return { material: null, items: [] }
+    const material = createEdgeMaterial(uniforms)
+    return {
+      material,
+      items: meshes.map((mesh) => {
+        const lines = new LineSegments(new EdgesGeometry(mesh.geometry, 55), material)
+        lines.renderOrder = 2
+        return { mesh, lines }
+      }),
+    }
+  }, [meshes, uniforms])
+
+  useEffect(
+    () => () => {
+      holoMaterial.dispose()
+      edges.material?.dispose()
+      for (const { lines } of edges.items) lines.geometry.dispose()
+    },
+    [holoMaterial, edges],
+  )
+
   useLayoutEffect(() => {
-    for (const material of materials) {
-      // Generated meshes can have flipped faces, so show both sides rather than holes.
-      material.side = DoubleSide
-      if (material instanceof MeshStandardMaterial) material.wireframe = wireframe
-      material.needsUpdate = true
+    for (const mesh of meshes) {
+      mesh.material = look === 'holo' ? holoMaterial : (originals.get(mesh) as Material | Material[])
+      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      for (const material of list) {
+        // Generated meshes can have flipped faces, so show both sides rather than holes.
+        material.side = DoubleSide
+        if (material instanceof MeshStandardMaterial) material.wireframe = wireframe
+        material.needsUpdate = true
+      }
+    }
+    for (const { mesh, lines } of edges.items) {
+      if (look === 'holo' && !wireframe) mesh.add(lines)
+      else mesh.remove(lines)
     }
     invalidate()
-  }, [materials, wireframe, invalidate])
+  }, [meshes, originals, holoMaterial, edges, look, wireframe, invalidate])
 
-  // The canvas only draws on demand, to save phone batteries, so ask for a frame once
-  // the mesh has been attached. Without this it stays blank until the first drag.
+  // Keeps the grid fixed to the mesh, and runs the scan and pulse like the landing page.
+  useFrame((state) => {
+    const t = reducedMotion ? 0 : state.clock.elapsedTime
+    uniforms.uTime.value = t
+    if (reducedMotion) {
+      uniforms.uScan.value = floor + height * 0.7
+      uniforms.uPulse.value = -1
+      return
+    }
+    uniforms.uScan.value = floor - 0.15 + (t % SCAN_PERIOD) * (height / 3.2)
+    const pulse = (t % PULSE_PERIOD) / PULSE_LENGTH
+    uniforms.uPulse.value = pulse <= 1 ? pulse : -1
+  })
+
+  // The canvas only draws on demand with reduced motion, so ask for a frame once the mesh is attached.
   useEffect(() => {
     onReady()
     const frame = requestAnimationFrame(() => invalidate())
@@ -58,16 +122,35 @@ function Model({ url, wireframe, onReady }: { url: string; wireframe: boolean; o
       <group scale={scale}>
         <primitive object={scene} position={offset} />
       </group>
-      <gridHelper args={[6, 12, '#b04a20', '#33271f']} position={[0, floor, 0]} />
+      <group position={[0, floor, 0]}>
+        <Floor uniforms={uniforms} />
+        <ContactShadows position={[0, 0.01, 0]} opacity={0.8} scale={9} blur={2.6} far={1.7} resolution={256} frames={reducedMotion ? 3 : Infinity} color="#000000" />
+      </group>
     </>
+  )
+}
+
+function Floor({ uniforms }: { uniforms: HoloUniforms }) {
+  const material = useMemo(() => createFloorMaterial(uniforms), [uniforms])
+  useEffect(() => () => material.dispose(), [material])
+  return (
+    <mesh rotation-x={-Math.PI / 2} material={material} renderOrder={-1}>
+      <planeGeometry args={[14, 14]} />
+    </mesh>
   )
 }
 
 export default function MeshViewer({ url }: { url: string }) {
   const controls = useRef<OrbitControlsImpl>(null)
+  const reducedMotion = useReducedMotion() ?? false
+  const uniforms = useMemo(createHoloUniforms, [])
+  const [look, setLook] = useState<Look>('holo')
   const [wireframe, setWireframe] = useState(false)
   const [ready, setReady] = useState(false)
+  const resume = useRef<number>(0)
   const onReady = useCallback(() => setReady(true), [])
+
+  useEffect(() => () => window.clearTimeout(resume.current), [])
 
   // Set explicitly: OrbitControls.reset() returns to the state saved before the camera was positioned.
   function resetView() {
@@ -78,18 +161,55 @@ export default function MeshViewer({ url }: { url: string }) {
     orbit.update()
   }
 
+  // The slow turntable stops while the person is dragging and starts again a few seconds later.
+  function pauseTurntable() {
+    window.clearTimeout(resume.current)
+    if (controls.current) controls.current.autoRotate = false
+  }
+  function resumeTurntable() {
+    window.clearTimeout(resume.current)
+    resume.current = window.setTimeout(() => {
+      if (controls.current && !reducedMotion) controls.current.autoRotate = true
+    }, 4000)
+  }
+
   return (
     <ErrorBoundary title="Viewer unavailable" message="This browser may not support WebGL, or the file may not have downloaded fully. The download links still work.">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-[radial-gradient(ellipse_at_50%_85%,rgb(255_106_43/0.1),#141413_62%)] lg:aspect-[16/10]">
-        <Canvas frameloop="demand" dpr={[1, 2]} camera={{ position: START_POSITION, fov: 40 }} aria-label="Interactive 3D view of the generated mesh">
-          <hemisphereLight args={['#ffffff', '#3a3a36', 1.6]} />
-          <directionalLight position={[4, 6, 3]} intensity={2} />
-          <directionalLight position={[-4, 2, -3]} intensity={0.7} />
+      <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-[radial-gradient(ellipse_at_50%_85%,rgb(255_106_43/0.12),#0f0f0e_65%)] lg:aspect-[16/10]">
+        <Canvas
+          frameloop={reducedMotion ? 'demand' : 'always'}
+          dpr={[1, 1.75]}
+          camera={{ position: START_POSITION, fov: 32, near: 0.1, far: 80 }}
+          gl={{ antialias: true, powerPreference: 'high-performance' }}
+          onCreated={({ gl }) => {
+            gl.toneMappingExposure = 1.15
+          }}
+          aria-label="Interactive 3D view of the generated mesh"
+        >
+          <Environment resolution={256} frames={1}>
+            <Lightformer form="rect" intensity={2.4} position={[0, 5, 0]} rotation-x={Math.PI / 2} scale={[10, 10, 1]} />
+            <Lightformer form="rect" intensity={1.6} color="#ffffff" position={[-6, 1.5, 1]} rotation-y={Math.PI / 2} scale={[8, 1.2, 1]} />
+            <Lightformer form="rect" intensity={1.2} color="#ffffff" position={[6, 1, -2]} rotation-y={-Math.PI / 2} scale={[8, 1, 1]} />
+            <Lightformer form="rect" intensity={3} color="#ff6a2b" position={[-2, 0.8, -6]} scale={[10, 1.4, 1]} />
+            <Lightformer form="ring" intensity={2.2} color="#ff7a3b" position={[5, 2.5, -4]} scale={4} />
+          </Environment>
+          <pointLight position={[-3.5, 1.6, -3.5]} color="#ff6a2b" intensity={40} distance={12} decay={2} />
+          <pointLight position={[3.5, 3, 3]} color="#ffffff" intensity={14} distance={12} decay={2} />
           <Suspense fallback={null}>
-            <Model url={url} wireframe={wireframe} onReady={onReady} />
+            <Model url={url} look={look} wireframe={wireframe} uniforms={uniforms} reducedMotion={reducedMotion} onReady={onReady} />
           </Suspense>
           {/* No damping: leftover momentum would carry the camera away from a reset. */}
-          <OrbitControls ref={controls} makeDefault enableDamping={false} minDistance={0.8} maxDistance={12} />
+          <OrbitControls
+            ref={controls}
+            makeDefault
+            enableDamping={false}
+            minDistance={3}
+            maxDistance={20}
+            autoRotate={!reducedMotion}
+            autoRotateSpeed={0.9}
+            onStart={pauseTurntable}
+            onEnd={resumeTurntable}
+          />
         </Canvas>
         {!ready && (
           <div className="pointer-events-none absolute inset-0 grid place-items-center">
@@ -109,6 +229,15 @@ export default function MeshViewer({ url }: { url: string }) {
           Generated mesh
         </p>
         <div className="absolute top-3 right-3 flex gap-2">
+          <button
+            type="button"
+            aria-pressed={look === 'natural'}
+            onClick={() => setLook(look === 'holo' ? 'natural' : 'holo')}
+            className={`inline-flex min-h-10 items-center gap-1.5 rounded-lg border px-3 text-sm backdrop-blur ${look === 'natural' ? 'border-accent bg-accent/15' : 'border-line-strong bg-page/70 hover:bg-raised'}`}
+          >
+            <Sparkles aria-hidden className="size-4" />
+            Original colours
+          </button>
           <button
             type="button"
             aria-pressed={wireframe}

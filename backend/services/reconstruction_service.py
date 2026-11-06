@@ -155,75 +155,17 @@ class ReconstructionManager:
             )
 
     def _remove_background(self, img: Image.Image) -> Image.Image:
-        """
-        Removes background from vehicle photo.
-        Uses rembg / bi-refnet if available, or clean OpenCV grabcut/alpha mask fallback.
-        """
-        try:
-            from rembg import remove
-            return remove(img)
-        except Exception:
-            # Fallback: simple white/light alpha thresholding for clean background
-            np_img = np.array(img)
-            # Create smooth alpha channel
-            return img
+        """Background removal happens inside backend.reconstruction (TripoSR's own preprocessing), so nothing runs twice."""
+        return img
 
     def _run_reconstruction(self, image: Image.Image, options: Dict[str, Any]) -> trimesh.Trimesh:
-        """
-        Executes TripoSR model inference if available (Person A's module).
-        Otherwise falls back to a clean procedural 3D vehicle mesh for testing.
-        """
-        # 1. Try importing Person A's backend/reconstruction module
+        """Runs Person A's TripoSR reconstruction. A failure is reported to the user, never replaced by an invented car."""
+        from backend.reconstruction import ReconstructionError, reconstruct as triposr_reconstruct
+
         try:
-            from backend.reconstruction import reconstruct as triposr_reconstruct
-            logger.info("Calling Person A's reconstruct() function...")
             mesh = triposr_reconstruct(image)
-            if isinstance(mesh, trimesh.Trimesh):
-                return mesh
-        except ImportError:
-            pass
-        except Exception as e:
-            logger.warning("Error running backend.reconstruction.reconstruct: %s", e)
-
-        # 2. Procedural vehicle 3D prototype for immediate frontend testing
-        logger.info("Generating vehicle 3D mesh representation with Trimesh...")
-        return self._generate_procedural_car_mesh()
-
-    def _generate_procedural_car_mesh(self) -> trimesh.Trimesh:
-        """
-        Generates a watertight, multi-component 3D car mesh with realistic proportions
-        (chassis, aerodynamic cabin, wheels, headlights) and vertex colors.
-        """
-        # Aerodynamic Lower Body (Chassis)
-        chassis = trimesh.creation.box(extents=[1.9, 0.45, 4.4])
-        chassis.apply_translation([0, 0.35, 0])
-        # Smooth vertex color (metallic blue/silver)
-        chassis.visual.vertex_colors = [40, 110, 210, 255]
-
-        # Upper Cabin (Cockpit / Greenhouse)
-        cabin = trimesh.creation.box(extents=[1.5, 0.55, 2.3])
-        cabin.apply_translation([0, 0.85, -0.2])
-        # Dark tinted glass color
-        cabin.visual.vertex_colors = [30, 30, 45, 255]
-
-        # 4 Wheels
-        wheel_meshes = []
-        for x in [-0.96, 0.96]:
-            for z in [-1.35, 1.35]:
-                cyl = trimesh.creation.cylinder(radius=0.36, height=0.26, sections=24)
-                cyl.apply_transform(trimesh.transformations.rotation_matrix(np.pi / 2, [0, 0, 1]))
-                cyl.apply_translation([x, 0.36, z])
-                cyl.visual.vertex_colors = [25, 25, 25, 255]
-                wheel_meshes.append(cyl)
-
-        # Headlights
-        headlights = []
-        for x in [-0.65, 0.65]:
-            light = trimesh.creation.box(extents=[0.35, 0.12, 0.05])
-            light.apply_translation([x, 0.45, 2.21])
-            light.visual.vertex_colors = [255, 255, 220, 255]
-            headlights.append(light)
-
-        combined = trimesh.util.concatenate([chassis, cabin] + wheel_meshes + headlights)
-        return combined
-
+        except ReconstructionError as e:
+            raise RuntimeError(f"3D reconstruction failed: {e}") from e
+        if not isinstance(mesh, trimesh.Trimesh):
+            raise RuntimeError("3D reconstruction did not return a mesh.")
+        return mesh

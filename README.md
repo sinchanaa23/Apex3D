@@ -59,6 +59,26 @@ python start_server.py
 
 ---
 
+## Running the full app (model, 3D reconstruction, frontend)
+
+Step-by-step guide: [docs/RUN_FULL_APP.md](docs/RUN_FULL_APP.md). In short:
+
+1. Put Person A's `model_quantized.onnx` in `checkpoints/` (not in Git, ask Person A for the file).
+2. `scripts\setup_triposr.ps1` (or clone TripoSR to a short path and set `APEX3D_TRIPOSR_DIR`), then `pip install -r requirements-ml.txt`. The TripoSR weights (about 1.7 GB, `stabilityai/TripoSR`) download on first use.
+3. `cd frontend && npm install && npm run build`, then `python start_server.py` and open http://localhost:8000.
+
+## Development log (Person D)
+
+Newest first. Each stage of the frontend and integration work is added here.
+
+- **3D Studio restyle and real TripoSR meshes (done):** TripoSR is installed and the website generates real meshes from photos (about 3 minutes per car on CPU, first run also downloads about 1.7 GB of weights and a 176 MB background-removal model). The mesh viewer now uses the landing page's look: dark glossy body, orange contour grid that follows the mesh, scan sweep and pulse, white edge lines, glowing floor, slow turntable that pauses while dragging. A toggle shows the mesh's original colours. Meshes with no normals get them computed on load. Photo quality matters: a clean side or three-quarter photo gives a car-shaped mesh, while open doors or busy backgrounds give lumpy results.
+- **Fake 3D fallback removed:** `backend/services/reconstruction_service.py` no longer invents a box-shaped car when TripoSR fails. The job fails with a clear error instead. Background removal now happens once, inside `backend/reconstruction`.
+- **Person A's model connected:** classifier loads `checkpoints/model_quantized.onnx`. Class names come from `results/class_names.json`, and the default thresholds are the validated 0.52 / 0.34.
+- **Person B's work connected:** `/api/classical` returns Person B's 10-stage pipeline. The Research Lab reads `eval_P5_metrics.json` plus Person A's `results/*.json`.
+- **Frontend:** React 19 + Vite + Tailwind, landing page with a 3D hero, HUD-style inner pages, upload on the page, Research Lab with real numbers. Tests: `cd frontend && npx vitest run`.
+
+---
+
 ## API Endpoints Summary
 
 Full specifications and schemas are in [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
