@@ -28,3 +28,13 @@ cloudflared.exe
 *.log
 .env
 tools/
+
+# Person B evaluation caches and local tooling
+.claude/
+.pytest_cache/
+node_modules/
+dist/
+*.joblib
+*.npy
+*.npz
+*.parquet
