@@ -131,9 +131,7 @@ class VehicleDetector:
                 elapsed_ms = (time.perf_counter() - start_time) * 1000
 
                 if vehicle_boxes:
-                    # Pick vehicle with highest confidence as primary
-                    primary = max(vehicle_boxes, key=lambda b: b.confidence)
-                    return primary, vehicle_boxes, round(elapsed_ms, 2)
+                    return choose_primary(vehicle_boxes), vehicle_boxes, round(elapsed_ms, 2)
                 else:
                     return None, [], round(elapsed_ms, 2)
 
@@ -201,11 +199,20 @@ class VehicleDetector:
         return None, [], round(elapsed_ms, 2)
 
 
+def choose_primary(boxes: List[BoundingBox]) -> BoundingBox:
+    """The main vehicle: the largest box among those already above the score threshold.
+
+    The highest score often belongs to a tiny background car, which would make the app identify
+    the wrong vehicle. Evidence is in results/detector_*.json under selection_rules.
+    """
+    return max(boxes, key=lambda b: (b.x2 - b.x1) * (b.y2 - b.y1))
+
+
 def get_crop(
     image: Image.Image,
     bbox: Optional[BoundingBox] = None,
     force_full_frame: bool = False,
-    padding_pct: float = 0.05,
+    padding_pct: float = 0.08,
 ) -> Tuple[Image.Image, str]:
     """
     Crops image to bounding box with optional padding.
