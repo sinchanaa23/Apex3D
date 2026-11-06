@@ -2,11 +2,15 @@
 
 Everything here ran on the real dataset unless it says otherwise. Results are in `results/`, and the final tables are in `eval_P5_DRAFT.md`.
 
-## Person A: one command left for the last results
+## Person A: last results still needed
 
-Hybrid, full robustness and crop ablations need your files, which aren't in Git.
+Hybrid, full robustness and crop ablations need your files, which aren't in Git. Nothing has produced them yet: `results/hybrid.json`, `robustness.json` and `ablation_inference.json` don't exist.
 
-**On your GPU laptop:**
+**The quick option:** share `outputs\apex3d_person_a_handover.zip` with Person B. Hybrid and confidence then run from the saved embeddings without any model.
+
+**About test image 00010 (your note 9):** this was the wrong-car bug. The detector found the main car at 0.87, but a 17×12 px background car scored 0.95 and was chosen. That crop was too small, so the app used the full frame. `detector_service.py` now picks the largest box above the score threshold.
+
+**Or run it all on your GPU laptop:**
 
 ```bash
 python scripts/prepare_dataset.py
@@ -38,37 +42,15 @@ python scripts/build_app_metrics.py
 
 The scripts stop with an error if the saved files or labels disagree with the dataset.
 
-## Person C: what the app needs to change
+## Person C: detection in the app
 
-**1. Crop the right car (important).** Don't crop the top-scoring detection. In our sample, that picked the wrong car in 68 of 500 images, usually a tiny one in the background. Use the evaluated rule:
+**Already changed in `backend/services/detector_service.py`:**
+- The app now crops the largest box above the score threshold (`choose_primary`), not the top score. In our 500-image sample, the top score missed the main car in 68 images, usually for a tiny car in the background.
+- The crop margin is now 8%, the margin the classifier was trained with.
 
-```python
-from detection.detector import VehicleDetector, crop_to_detection, select_primary
+**Keep `backend/data/__init__.py` using relative imports.** Its `backend.data` import stopped every Person B script from starting. `tests/test_person_b_integration.py` now guards against this.
 
-found = VehicleDetector("resnet50", device="cuda").detect(rgb_pil_image)
-primary = select_primary(found)                  # None if there is no vehicle
-crop = crop_to_detection(rgb_pil_image, primary) # applies the 8% margin the classifier expects
-```
-
-**2. Show the classical pipeline we evaluated.** `/api/classical` runs a separate copy in `classical_service.py`, with different Canny, HOG and LBP settings. Replace the service call with this, which returns the format in `frontend/API_EXPECTATIONS.md`. Bad input raises `ValueError`, with a message you can show:
-
-```python
-from classical_cv import api_response
-
-response = api_response(bgr_image)   # uint8 BGR, as from cv2
-```
-
-**3. Keep this file on merge.** `backend/classical_cv/__init__.py` exists on both branches. Take this version, because yours is a placeholder that nothing calls.
-
-**4. Check these against Person A's handover.** They're from reading `backend-c`, not from running it:
-
-| Area | `backend-c` has | Person A shipped |
-|---|---|---|
-| ONNX filename | `model_quantized.onnx`, `model.onnx` | `apex3d_convnext_tiny_int8_static_matmul.onnx` |
-| Thresholds | 0.50, margin 0.15, reject 0.20 | 0.52, margin 0.34, reject 0.52, in the bundle |
-| Crop margin | Check it applies 8% | 8% per side |
-
-**5. Metrics.** `scripts/build_app_metrics.py` writes `eval_P5_metrics.json`, one of the paths your route reads. Its top-level keys follow the Research Lab's format in `frontend/API_EXPECTATIONS.md`. Your route wraps the file in a `metrics` field, so check that the frontend and route agree on that.
+**Metrics.** `scripts/build_app_metrics.py` writes `eval_P5_metrics.json`, one of the paths your route reads.
 
 ## Person D: Research Lab
 
