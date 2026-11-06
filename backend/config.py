@@ -39,8 +39,8 @@ DEVICE = "cuda" if CUDA_AVAILABLE else "cpu"
 # Classification confidence & decision thresholds
 # Top-1 prob >= CONFIDENT_THRESHOLD AND margin >= MARGIN_THRESHOLD -> confident
 CONFIDENT_THRESHOLD = float(os.getenv("APEX3D_CONFIDENT_THRESHOLD", "0.50"))
-AMBIGUOUS_MARGIN_THRESHOLD = float(os.getenv("APEX3D_MARGIN_THRESHOLD", "0.15"))
-REJECTED_THRESHOLD = float(os.getenv("APEX3D_REJECTED_THRESHOLD", "0.20"))
+AMBIGUOUS_MARGIN_THRESHOLD = float(os.getenv("APEX3D_MARGIN_THRESHOLD", "0.34"))
+REJECTED_THRESHOLD = float(os.getenv("APEX3D_REJECTED_THRESHOLD", "0.52"))
 
 # Request constraints
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20 MB

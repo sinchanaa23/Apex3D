@@ -1,10 +1,11 @@
 import { useId, useState } from 'react'
+import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { Check, ImagePlus, Plus, TriangleAlert } from 'lucide-react'
 import { ApiError, getReferences, uploadReferences } from '../api/client'
 import type { Reference, Viewpoint } from '../api/types'
 import { Attribution } from '../components/Attribution'
-import { Card, ErrorNotice, PageHeader, Spinner, primaryButton, secondaryButton } from '../components/States'
+import { Card, ErrorNotice, PageHeader, Spinner, hudPrimary as primaryButton, hudSecondary as secondaryButton } from '../components/States'
 import { checkFile, normaliseImage } from '../lib/image'
 import { useResource } from '../lib/useResource'
 import { useSession } from '../state/session'
@@ -20,19 +21,25 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: 'unsorted', label: 'Unsorted' },
 ]
 
-function ReferenceCard({ reference, group, onMove }: { reference: Reference; group: Group; onMove(group: Group): void }) {
+function ReferenceCard({ reference, group, onMove, index }: { reference: Reference; group: Group; onMove(group: Group): void; index: number }) {
   const { input, setInput, pack, togglePack } = useSession()
   const isInput = input?.kind === 'reference' && input.reference.id === reference.id
   const inPack = pack.some((r) => r.id === reference.id)
   const selectId = useId()
 
   return (
-    <li className={`flex flex-col overflow-hidden rounded-xl border bg-surface ${isInput ? 'border-accent' : 'border-line'}`}>
+    <motion.li
+      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: Math.min(index * 0.05, 0.5) }}
+      whileHover={{ y: -3 }}
+      className={`hud-panel flex flex-col overflow-hidden ${isInput ? 'border-accent shadow-[0_0_30px_-8px_rgb(255_106_43/0.55)]' : ''}`}
+    >
       <div className="relative">
-        <img src={reference.image_url} alt={`Reference image from ${reference.source}`} loading="lazy" className="aspect-[4/3] w-full bg-raised object-cover" />
+        <img src={reference.thumb_url ?? reference.image_url} alt={`Reference image from ${reference.source}`} loading="lazy" className="aspect-[4/3] w-full bg-raised object-cover" />
         {reference.match === 'confirmed' && (
           <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded bg-page/85 px-1.5 py-0.5 text-xs">
-            <Check aria-hidden className="size-3 text-good" /> Classifier match
+            <Check aria-hidden className="size-3 text-good" /> Title matches model
           </span>
         )}
         {reference.match === 'approximate' && (
@@ -80,7 +87,7 @@ function ReferenceCard({ reference, group, onMove }: { reference: Reference; gro
           </div>
         </div>
       </div>
-    </li>
+    </motion.li>
   )
 }
 
@@ -146,11 +153,12 @@ export default function References() {
 
   const all = [...uploadedReferences, ...(retrieval.data?.candidates ?? [])]
   const groupOf = (reference: Reference): Group => moved[reference.id] ?? reference.viewpoint ?? 'unsorted'
-  const inputUrl = input?.kind === 'photo' ? photo?.url : input?.reference.image_url
+  const inputUrl = input?.kind === 'photo' ? photo?.url : (input?.reference.thumb_url ?? input?.reference.image_url)
 
   return (
     <div>
       <PageHeader
+        eyebrow="04 / References"
         title="Reference Studio"
         intro={
           identity ? (
@@ -214,7 +222,7 @@ export default function References() {
 
       {retrieval.status === 'loading' && classId != null && (
         <div className="mb-6">
-          <Spinner label="Searching Wikimedia Commons and checking results with the classifier" />
+          <Spinner label="Searching Wikimedia Commons" />
         </div>
       )}
       {retrieval.status === 'error' && (
@@ -235,12 +243,13 @@ export default function References() {
           <section key={key} className="mb-8">
             <h2 className="mb-3 flex items-baseline gap-2 text-lg font-medium">
               {label}
-              <span className="num font-mono text-xs font-normal text-ink-3">{items.length}</span>
+              <span className="num rounded border border-line px-1.5 font-mono text-xs font-normal text-accent">{String(items.length).padStart(2, '0')}</span>
             </h2>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {items.map((reference) => (
+              {items.map((reference, index) => (
                 <ReferenceCard
                   key={reference.id}
+                  index={index}
                   reference={reference}
                   group={key}
                   onMove={(group) => setMoved((previous) => ({ ...previous, [reference.id]: group }))}

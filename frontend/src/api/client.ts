@@ -1,11 +1,18 @@
-import type {
-  ClassicalResponse,
-  Job,
-  MetricsResponse,
-  RecognizeResponse,
-  ReferencesResponse,
-  ValidationReport,
-} from './types'
+import {
+  adaptClassical,
+  adaptJob,
+  adaptMetrics,
+  adaptRecognition,
+  adaptReference,
+  adaptReferences,
+  type WireClassical,
+  type WireJob,
+  type WireMetrics,
+  type WireRecognition,
+  type WireReference,
+} from './adapter'
+import { normaliseImage } from '../lib/image'
+import type { MetricsResponse, Reference } from './types'
 
 export type ApiErrorKind = 'network' | 'timeout' | 'http' | 'parse' | 'aborted'
 
@@ -22,6 +29,7 @@ export class ApiError extends Error {
 }
 
 const OFFLINE = "Can't reach the Apex3D server. The host laptop may be offline, or the public link may have changed."
+const UNREADABLE = 'The server sent a response this page could not read.'
 
 /** Turns a failed response into the message shown to the user. */
 export function errorMessage(status: number, body: string): string {
@@ -66,7 +74,7 @@ async function request<T>(path: string, init: RequestInit, { signal, timeoutMs =
     try {
       return JSON.parse(body) as T
     } catch {
-      throw new ApiError('parse', 'The server sent a response this page could not read.', response.status)
+      throw new ApiError('parse', UNREADABLE, response.status)
     }
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -79,52 +87,124 @@ async function request<T>(path: string, init: RequestInit, { signal, timeoutMs =
   }
 }
 
-function imageForm(file: Blob): FormData {
+/** Runs a translation, reporting a response in the wrong shape as a readable error. */
+function adapted<W, T>(wire: W, adapt: (wire: W) => T): T {
+  try {
+    return adapt(wire)
+  } catch {
+    throw new ApiError('parse', UNREADABLE)
+  }
+}
+
+function fileForm(file: Blob, name = 'photo.jpg'): FormData {
   const form = new FormData()
-  form.append('image', file, 'photo.jpg')
+  form.append('file', file, name)
   return form
 }
 
-export function recognize(image: Blob, signal?: AbortSignal) {
-  return request<RecognizeResponse>('/api/recognize', { method: 'POST', body: imageForm(image) }, { signal, timeoutMs: 90_000 })
+export async function recognize(image: Blob, size: { width: number; height: number }, signal?: AbortSignal) {
+  const wire = await request<WireRecognition>('/api/recognize', { method: 'POST', body: fileForm(image) }, { signal, timeoutMs: 90_000 })
+  return adapted(wire, (w) => adaptRecognition(w, size))
 }
 
-export function classical(image: Blob, signal?: AbortSignal) {
-  return request<ClassicalResponse>('/api/classical', { method: 'POST', body: imageForm(image) }, { signal, timeoutMs: 60_000 })
+export async function classical(image: Blob, signal?: AbortSignal) {
+  const wire = await request<WireClassical>('/api/classical', { method: 'POST', body: fileForm(image) }, { signal, timeoutMs: 60_000 })
+  return adapted(wire, adaptClassical)
 }
 
-export function getReferences(classId: number, signal?: AbortSignal) {
-  return request<ReferencesResponse>(`/api/references?class_id=${classId}`, {}, { signal, timeoutMs: 90_000 })
+export async function getReferences(classId: number, signal?: AbortSignal) {
+  const wire = await request<{ query?: string | null; candidates: WireReference[] }>(`/api/references?class_id=${classId}`, {}, { signal, timeoutMs: 90_000 })
+  return adapted(wire, adaptReferences)
 }
 
-export function uploadReferences(files: File[], signal?: AbortSignal) {
-  const form = new FormData()
-  for (const file of files) form.append('images', file, file.name)
-  return request<ReferencesResponse>('/api/references/upload', { method: 'POST', body: form }, { signal, timeoutMs: 90_000 })
+/** The endpoint takes one file at a time. */
+export async function uploadReferences(files: File[], signal?: AbortSignal) {
+  const candidates = await Promise.all(
+    files.map(async (file) => {
+      const wire = await request<{ candidate: WireReference }>(
+        '/api/references/upload',
+        { method: 'POST', body: fileForm(file, file.name) },
+        { signal, timeoutMs: 90_000 },
+      )
+      return adapted(wire.candidate, adaptReference)
+    }),
+  )
+  return { candidates }
 }
 
-export type ReconstructInput = { image: Blob } | { referenceId: string }
+export type ReconstructInput = { image: Blob } | { reference: Reference }
 
-export function reconstruct(input: ReconstructInput, classId?: number | null, signal?: AbortSignal) {
-  const form = new FormData()
-  if ('image' in input) form.append('image', input.image, 'input.jpg')
-  else form.append('reference_id', input.referenceId)
-  if (classId != null) form.append('class_id', String(classId))
-  return request<{ job_id: string }>('/api/reconstruct', { method: 'POST', body: form }, { signal, timeoutMs: 60_000 })
+async function reconstructForm(input: ReconstructInput): Promise<FormData> {
+  if ('image' in input) return fileForm(input.image, 'input.jpg')
+
+  // The browser fetches the reference and uploads the file itself, so the server never has to fetch a web address on our behalf.
+  const response = await fetch(input.reference.image_url).catch(() => null)
+  if (!response?.ok) throw new ApiError('network', "That reference image couldn't be loaded. Choose another, or upload your own.")
+  const blob = await response.blob()
+  const prepared = await normaliseImage(new File([blob], 'reference.jpg', { type: blob.type || 'image/jpeg' })).catch(() => null)
+  if (!prepared) throw new ApiError('parse', "That reference image couldn't be read. Choose another, or upload your own.")
+  URL.revokeObjectURL(prepared.url)
+  return fileForm(prepared.file, 'input.jpg')
 }
 
-export function getJob(id: string, signal?: AbortSignal) {
-  return request<Job>(`/api/jobs/${encodeURIComponent(id)}`, {}, { signal, timeoutMs: 15_000 })
+export async function reconstruct(input: ReconstructInput, signal?: AbortSignal) {
+  return request<{ job_id: string }>('/api/reconstruct', { method: 'POST', body: await reconstructForm(input) }, { signal, timeoutMs: 60_000 })
+}
+
+export async function getJob(id: string, signal?: AbortSignal) {
+  const wire = await request<WireJob>(`/api/jobs/${encodeURIComponent(id)}`, {}, { signal, timeoutMs: 15_000 })
+  return adapted(wire, adaptJob)
 }
 
 export function assetUrl(assetId: string, file: string) {
   return `/api/assets/${encodeURIComponent(assetId)}/${encodeURIComponent(file)}`
 }
 
-export function getValidation(assetId: string, file: string, signal?: AbortSignal) {
-  return request<ValidationReport>(assetUrl(assetId, file), {}, { signal })
+/**
+ * Fetches a saved result file that was copied next to the app when it was built (see vite.config.ts).
+ * Returns null for anything that isn't JSON, because the server answers unknown paths with the app's own page.
+ */
+async function savedResult(name: string, signal?: AbortSignal): Promise<Record<string, unknown> | null> {
+  try {
+    const response = await fetch(`/results/${name}`, { signal })
+    if (!response.ok) return null
+    const parsed: unknown = JSON.parse(await response.text())
+    return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
 }
 
-export function getMetrics(signal?: AbortSignal) {
-  return request<MetricsResponse>('/api/metrics', {}, { signal })
+const hasSection = (metrics: MetricsResponse) => Object.entries(metrics).some(([key, value]) => key !== 'message' && value != null && value !== 'not available')
+
+/**
+ * The backend's /api/metrics is the first choice. Any section it has no data for is filled from the result files
+ * Person A saved under results/, so the Research Lab shows the trained model's real numbers even while the backend
+ * does not read that folder. Nothing is invented: a section with no file behind it stays "not available".
+ */
+export async function getMetrics(signal?: AbortSignal): Promise<MetricsResponse> {
+  let fromApi: MetricsResponse | null = null
+  let apiError: unknown = null
+  try {
+    fromApi = adapted(await request<WireMetrics>('/api/metrics', {}, { signal }), adaptMetrics)
+  } catch (error) {
+    if (error instanceof ApiError && error.kind === 'aborted') throw error
+    apiError = error
+  }
+
+  const [classifier, optimisation] = await Promise.all([savedResult('classifier_metrics.json', signal), savedResult('optimization_metrics.json', signal)])
+  if (!classifier && !optimisation) {
+    if (fromApi) return fromApi
+    throw apiError
+  }
+
+  const fromFiles = adapted(
+    { status: 'available', source_file: 'results/', metrics: { classifier_metrics: classifier, optimization_metrics: optimisation } } as WireMetrics,
+    adaptMetrics,
+  )
+  const merged: MetricsResponse = { ...fromFiles, message: fromApi?.message }
+  for (const [key, value] of Object.entries(fromApi ?? {})) {
+    if (key !== 'message' && value != null && value !== 'not available') (merged as Record<string, unknown>)[key] = value
+  }
+  return hasSection(merged) ? merged : (fromApi ?? merged)
 }

@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
+import { motion } from 'framer-motion'
+import { CountUp } from '../components/hud/CountUp'
 import { getMetrics } from '../api/client'
 import type { MaybeSection, MetricsResponse } from '../api/types'
+import { ConfidenceBadge } from '../components/ConfidenceBadge'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { LineChart } from '../components/LineChart'
 import { ErrorNotice, PageHeader } from '../components/States'
@@ -18,7 +21,13 @@ function SectionBody<T>({ render, data }: { render(data: T): ReactNode; data: T 
 function Section<T>({ title, why, value, children }: { title: string; why: string; value: MaybeSection<T>; children(data: T): ReactNode }) {
   const available = value != null && typeof value === 'object'
   return (
-    <section className="border-t border-line py-8">
+    <motion.section
+      className="border-t border-line py-8"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-xl font-medium tracking-tight">{title}</h2>
         {available ? (
@@ -38,15 +47,17 @@ function Section<T>({ title, why, value, children }: { title: string; why: strin
       ) : (
         <p className="text-sm text-ink-3">The notebook that produces this result hasn't saved its file yet.</p>
       )}
-    </section>
+    </motion.section>
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, delay = 0 }: { label: string; value: number; delay?: number }) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
+    <div className="hud-panel p-4">
       <dt className="text-sm text-ink-2">{label}</dt>
-      <dd className="mt-1 text-3xl font-semibold tracking-tight">{value}</dd>
+      <dd className="mt-1 text-3xl font-semibold tracking-tight">
+        <CountUp value={value} delay={delay} duration={1.1} />
+      </dd>
     </div>
   )
 }
@@ -57,7 +68,14 @@ function Rate({ value }: { value?: number | null }) {
   return (
     <span className="flex items-center justify-end gap-2">
       <span aria-hidden className="hidden h-1.5 w-20 rounded-full bg-line sm:block">
-        <span className="block h-full rounded-r-full" style={{ width: `${value * 100}%`, background: SERIES_1 }} />
+        <motion.span
+          className="block h-full origin-left rounded-r-full"
+          style={{ width: `${value * 100}%`, background: SERIES_1, boxShadow: `0 0 8px ${SERIES_1}` }}
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        />
       </span>
       <span className="num font-mono">{percent(value)}</span>
     </span>
@@ -70,7 +88,7 @@ function Plain({ children }: { children: ReactNode }) {
 
 function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+    <div className="hud-panel overflow-x-auto">
       <table className="w-full min-w-max text-sm">
         <thead>
           <tr className="border-b border-line text-ink-3">
@@ -109,19 +127,24 @@ function TableView({ children }: { children: ReactNode }) {
 type Robustness = NonNullable<Extract<MetricsResponse['robustness'], { data: unknown }>['data']>
 
 function RobustnessCharts({ rows }: Robustness) {
+  // One result per perturbation can't make a curve, so show it as a table.
+  if (rows.every((row) => row.severity == null)) {
+    return <Table head={['Perturbation', 'Top-1']} rows={rows.map((row) => [humanise(row.perturbation), <Rate value={row.top1} />])} />
+  }
+
   const groups = [...new Set(rows.map((row) => row.perturbation))]
-  const severities = [...new Set(rows.map((row) => row.severity))].sort((a, b) => a - b)
+  const severities = [...new Set(rows.map((row) => row.severity as number))].sort((a, b) => a - b)
   return (
     <>
-      <div className="grid gap-x-6 gap-y-6 rounded-xl border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-x-6 gap-y-6 hud-panel p-4 sm:grid-cols-2 lg:grid-cols-3">
         {groups.map((group) => {
-          const points = rows.filter((row) => row.perturbation === group).sort((a, b) => a.severity - b.severity)
+          const points = rows.filter((row) => row.perturbation === group).sort((a, b) => (a.severity as number) - (b.severity as number))
           return (
             <LineChart
               key={group}
               title={humanise(group)}
               xLabel="Severity"
-              xs={points.map((p) => p.severity)}
+              xs={points.map((p) => p.severity as number)}
               series={[{ name: 'Top-1', color: SERIES_1, values: points.map((p) => p.top1) }]}
               height={170}
             />
@@ -159,6 +182,7 @@ export default function Lab() {
   return (
     <div>
       <PageHeader
+        eyebrow="06 / Research Lab"
         title="Research Lab"
         intro="Every number here is read from JSON files saved by the training and evaluation notebooks. Nothing is written into the page, and a missing file is reported as not available."
       />
@@ -168,15 +192,24 @@ export default function Lab() {
 
       {metrics.status === 'ready' && (
         <>
-          <Section title="Classifier accuracy" why="Top-1 and Top-5 on the unseen test set, reported for ground-truth crops and for detector crops." value={metrics.data.classifier}>
+          {metrics.data.message && <p className="mb-6 rounded-lg border border-line bg-surface p-3 text-sm text-ink-2">{metrics.data.message}</p>}
+          <Section title="Classifier accuracy" why="Top-1 and Top-5 on the unseen test set. Ground-truth crops use the annotated box. Detector crops, where measured, use the box the detector found." value={metrics.data.classifier}>
             {(d) => (
               <>
                 <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                  <Stat label="Top-1, ground-truth crop" value={percent(d.top1)} />
-                  <Stat label="Top-5, ground-truth crop" value={percent(d.top5)} />
-                  {d.top1_detector_crop != null && <Stat label="Top-1, detector crop" value={percent(d.top1_detector_crop)} />}
-                  {d.top5_detector_crop != null && <Stat label="Top-5, detector crop" value={percent(d.top5_detector_crop)} />}
+                  <Stat label="Top-1, ground-truth crop" value={d.top1} />
+                  <Stat label="Top-5, ground-truth crop" value={d.top5} delay={0.1} />
+                  {d.top1_detector_crop != null && <Stat label="Top-1, detector crop" value={d.top1_detector_crop} delay={0.2} />}
+                  {d.top5_detector_crop != null && <Stat label="Top-5, detector crop" value={d.top5_detector_crop} delay={0.3} />}
+                  {d.make_top1 != null && <Stat label="Make-level Top-1" value={d.make_top1} delay={0.4} />}
+                  {d.macro_f1 != null && <Stat label="Macro F1" value={d.macro_f1} delay={0.5} />}
                 </dl>
+                {d.val_top1 != null && (
+                  <p className="num mt-3 font-mono text-sm text-ink-3">
+                    validation Top-1 {percent(d.val_top1)}
+                    {d.val_top5 != null && ` · Top-5 ${percent(d.val_top5)}`}
+                  </p>
+                )}
                 {(d.model || d.test_images != null) && (
                   <p className="mt-3 text-sm text-ink-3">
                     {d.model}
@@ -185,6 +218,19 @@ export default function Lab() {
                   </p>
                 )}
               </>
+            )}
+          </Section>
+
+          <Section title="Training run" why="How the classifier was trained and on what, as recorded by its notebook." value={metrics.data.run}>
+            {(d) => (
+              <dl className="hud-panel divide-y divide-line px-4">
+                {d.rows.map((row) => (
+                  <div key={row.label} className="flex flex-wrap justify-between gap-x-6 gap-y-1 py-2.5">
+                    <dt className="text-sm text-ink-2">{row.label}</dt>
+                    <dd className="num text-right font-mono text-sm">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
             )}
           </Section>
 
@@ -197,19 +243,29 @@ export default function Lab() {
             )}
           </Section>
 
-          <Section title="Size and speed" why="The optimisation result: model size, inference time and accuracy before and after." value={metrics.data.optimisation}>
-            {(d) => (
-              <Table
-                head={['Variant', 'Size', 'CPU', 'GPU', 'Top-1']}
-                rows={d.rows.map((r) => [
-                  r.variant,
-                  <Plain>{r.size_mb.toFixed(1)} MB</Plain>,
-                  <Plain>{r.cpu_ms == null ? null : milliseconds(r.cpu_ms)}</Plain>,
-                  <Plain>{r.gpu_ms == null ? null : milliseconds(r.gpu_ms)}</Plain>,
-                  <Rate value={r.top1} />,
-                ])}
-              />
-            )}
+          <Section title="Size and speed" why="The optimisation result: model size, inference time and accuracy before and after. Times are per image, on the machine that ran the notebook." value={metrics.data.optimisation}>
+            {(d) => {
+              const hasGpu = d.rows.some((r) => r.gpu_ms != null)
+              const hasTop5 = d.rows.some((r) => r.top5 != null)
+              const hasAgreement = d.rows.some((r) => r.agreement != null)
+              return (
+                <Table
+                  head={['Variant', 'Size', 'CPU', ...(hasGpu ? ['GPU'] : []), 'Top-1', ...(hasTop5 ? ['Top-5'] : []), ...(hasAgreement ? ['Agrees with original'] : [])]}
+                  rows={d.rows.map((r) => [
+                    <span key="v" className="flex flex-wrap items-center gap-2">
+                      {r.variant}
+                      {r.note && <span className="rounded-full border border-accent/60 px-2 py-0.5 text-xs text-accent">{r.note}</span>}
+                    </span>,
+                    <Plain>{r.size_mb.toFixed(1)} MB</Plain>,
+                    <Plain>{r.cpu_ms == null ? null : milliseconds(r.cpu_ms)}</Plain>,
+                    ...(hasGpu ? [<Plain>{r.gpu_ms == null ? null : milliseconds(r.gpu_ms)}</Plain>] : []),
+                    <Rate value={r.top1} />,
+                    ...(hasTop5 ? [<Rate value={r.top5} />] : []),
+                    ...(hasAgreement ? [<Rate value={r.agreement} />] : []),
+                  ])}
+                />
+              )
+            }}
           </Section>
 
           <Section title="Robustness" why="Top-1 as brightness, low light, blur, noise, low resolution and occlusion get worse." value={metrics.data.robustness}>
@@ -219,9 +275,21 @@ export default function Lab() {
           <Section title="Confidence and rejection" why="Raising the threshold rejects more images and is more accurate on those it keeps. The chosen threshold decides the confident state on the identity page." value={metrics.data.confidence}>
             {(d) => {
               const rows = [...d.rows].sort((a, b) => a.threshold - b.threshold)
+              // One threshold is a single point, which cannot be drawn as a curve, so show it as a table.
+              if (rows.length < 2) {
+                return (
+                  <>
+                    <Table
+                      head={['Threshold', 'Coverage', 'Accuracy']}
+                      rows={rows.map((r) => [<Plain>{r.threshold.toFixed(2)}</Plain>, <Plain>{percent(r.coverage)}</Plain>, <Plain>{percent(r.accuracy)}</Plain>])}
+                    />
+                    {d.chosen_threshold != null && <p className="mt-3 text-sm text-ink-3">Chosen on the validation set: {d.chosen_threshold}.</p>}
+                  </>
+                )
+              }
               return (
                 <>
-                  <div className="rounded-xl border border-line bg-surface p-4">
+                  <div className="hud-panel p-4">
                     <LineChart
                       title="Coverage and accuracy by confidence threshold"
                       xLabel="Threshold"
@@ -244,6 +312,35 @@ export default function Lab() {
                 </>
               )
             }}
+          </Section>
+
+          <Section title="Confidence states" why="What the identity page does with each answer, and how often each state is right. A confident answer should be right far more often than an ambiguous or rejected one." value={metrics.data.states}>
+            {(d) => (
+              <>
+                <Table
+                  head={['State', 'Share of test images', 'Accuracy']}
+                  rows={d.rows.map((r) => [<ConfidenceBadge key={r.state} state={r.state} />, <Rate value={r.share} />, <Rate value={r.accuracy} />])}
+                />
+                {d.rule && <p className="mt-3 max-w-2xl text-sm text-ink-2">{d.rule}</p>}
+              </>
+            )}
+          </Section>
+
+          <Section title="Calibration" why="A calibrated model's stated confidence matches how often it is right. Temperature scaling, fitted on the validation set, corrects it. ECE is the average gap between the two, and lower is better." value={metrics.data.calibration}>
+            {(d) => (
+              <>
+                <dl className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <div className="hud-panel p-4">
+                    <dt className="text-sm text-ink-2">Temperature</dt>
+                    <dd className="num mt-1 text-3xl font-semibold tracking-tight">{d.temperature.toFixed(3)}</dd>
+                  </div>
+                </dl>
+                <Table
+                  head={['Measure', 'Before', 'After']}
+                  rows={d.rows.map((r) => [r.metric, <Plain>{r.before?.toFixed(3)}</Plain>, <Plain>{r.after?.toFixed(3)}</Plain>])}
+                />
+              </>
+            )}
           </Section>
 
           <Section title="Classical vs deep vs hybrid" why="All three on the same split. If fusion doesn't help, this table shows that." value={metrics.data.comparison}>
@@ -286,7 +383,7 @@ export default function Lab() {
             {(d) => (
               <ul className="grid gap-4 md:grid-cols-3">
                 {d.cases.map((item) => (
-                  <li key={item.title} className="overflow-hidden rounded-xl border border-line bg-surface">
+                  <li key={item.title} className="hud-panel overflow-hidden">
                     {item.image && <img src={item.image} alt={item.title} loading="lazy" className="aspect-[4/3] w-full object-cover" />}
                     <div className="p-4">
                       <h3 className="font-medium">{item.title}</h3>

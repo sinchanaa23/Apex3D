@@ -241,8 +241,8 @@ def _run_with_fallback(processed: Image.Image, settings: ReconstructionSettings,
         raise ReconstructionError(f"Reconstruction failed on the CPU too: {type(exc).__name__}: {exc}") from exc
 
 
-def reconstruct(image: ImageInput, settings: ReconstructionSettings | None = None) -> ReconstructionResult:
-    """Generate a mesh from ONE image. Blocking; call it from a background worker.
+def reconstruct_detailed(image: ImageInput, settings: ReconstructionSettings | None = None) -> ReconstructionResult:
+    """Generate a mesh from ONE image, with timings and the processed input. Blocking.
 
     Returns a :class:`ReconstructionResult` whose ``mesh`` is a ``trimesh.Trimesh``
     (Y-up, unitless, roughly centred at the origin). Raises
@@ -281,6 +281,19 @@ def reconstruct(image: ImageInput, settings: ReconstructionSettings | None = Non
             isosurface_backend=_iso_backend,
             notes=notes,
         )
+
+
+def reconstruct(image: ImageInput, settings: ReconstructionSettings | None = None):
+    """Person C's contract: ``reconstruct(image) -> trimesh.Trimesh``. Blocking.
+
+    Same as :func:`reconstruct_detailed`, but returns the mesh itself. The JSON-safe
+    summary (device, timings, settings, notes) is attached as
+    ``mesh.metadata["apex3d"]``. Raises :class:`ReconstructionError` on failure;
+    callers must surface that error, not replace the mesh with a stand-in.
+    """
+    result = reconstruct_detailed(image, settings)
+    result.mesh.metadata["apex3d"] = result.summary()
+    return result.mesh
 
 
 def release_gpu() -> None:

@@ -58,7 +58,7 @@ function Model({ url, wireframe, onReady }: { url: string; wireframe: boolean; o
       <group scale={scale}>
         <primitive object={scene} position={offset} />
       </group>
-      <gridHelper args={[6, 12, '#454541', '#2c2c2a']} position={[0, floor, 0]} />
+      <gridHelper args={[6, 12, '#b04a20', '#33271f']} position={[0, floor, 0]} />
     </>
   )
 }
@@ -80,7 +80,7 @@ export default function MeshViewer({ url }: { url: string }) {
 
   return (
     <ErrorBoundary title="Viewer unavailable" message="This browser may not support WebGL, or the file may not have downloaded fully. The download links still work.">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-[#141413] lg:aspect-[16/10]">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-[radial-gradient(ellipse_at_50%_85%,rgb(255_106_43/0.1),#141413_62%)] lg:aspect-[16/10]">
         <Canvas frameloop="demand" dpr={[1, 2]} camera={{ position: START_POSITION, fov: 40 }} aria-label="Interactive 3D view of the generated mesh">
           <hemisphereLight args={['#ffffff', '#3a3a36', 1.6]} />
           <directionalLight position={[4, 6, 3]} intensity={2} />
@@ -93,9 +93,21 @@ export default function MeshViewer({ url }: { url: string }) {
         </Canvas>
         {!ready && (
           <div className="pointer-events-none absolute inset-0 grid place-items-center">
-            <Spinner label="Loading mesh" />
+            <div className="w-40 text-center">
+              <Spinner label="Loading mesh" />
+              <div className="scanbar mt-3" />
+            </div>
           </div>
         )}
+        <span aria-hidden className="hud-corner tl" />
+        <span aria-hidden className="hud-corner tr" />
+        <span aria-hidden className="hud-corner bl" />
+        <span aria-hidden className="hud-corner br" />
+        {ready && <span aria-hidden className="scan-line once" />}
+        <p className="pointer-events-none absolute top-4 left-5 hidden items-center gap-2 font-mono sm:flex text-[11px] tracking-[0.2em] text-accent uppercase">
+          <span aria-hidden className="size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)]" />
+          Generated mesh
+        </p>
         <div className="absolute top-3 right-3 flex gap-2">
           <button
             type="button"
@@ -115,7 +127,7 @@ export default function MeshViewer({ url }: { url: string }) {
             Reset view
           </button>
         </div>
-        <p className="pointer-events-none absolute bottom-2 left-3 text-xs text-ink-3">
+        <p className="pointer-events-none absolute bottom-3 left-8 text-xs text-ink-3">
           <span className="touch:hidden">Drag to rotate · scroll to zoom · right-drag to pan</span>
           <span className="hidden touch:inline">Drag to rotate · pinch to zoom · two fingers to pan</span>
         </p>

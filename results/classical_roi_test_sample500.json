@@ -1,0 +1,14 @@
+{
+  "experiment": "classical_roi_evaluation",
+  "method": "Largest contour after median-threshold Canny and morphological closing",
+  "split": "test",
+  "is_random_sample": true,
+  "images": 500,
+  "seed": 42,
+  "mean_iou": 0.6423558678724546,
+  "median_iou": 0.6466133333333333,
+  "share_iou_at_least_50": 0.772,
+  "share_iou_at_least_75": 0.308,
+  "share_covering_90_percent_of_frame": 0.342,
+  "whole_image_mean_iou": 0.5640958887900117
+}

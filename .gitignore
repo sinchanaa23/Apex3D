@@ -47,6 +47,9 @@ outputs/
 *.bin
 *.safetensors
 
+# Source code exception for backend data
+!backend/data/
+
 # 3D assets & exports (generated meshes)
 *.glb
 *.obj
@@ -65,12 +68,21 @@ frontend/node_modules/
 frontend/dist/
 frontend/.next/
 frontend/out/
+node_modules/
 
 # Third-party clones & local tooling
 third_party/
 cloudflared.exe
 *.log
 tools/
+
+# Evaluation caches
+.claude/
+.pytest_cache/
+*.joblib
+*.npy
+*.npz
+*.parquet
 
 # OS specific
 .DS_Store

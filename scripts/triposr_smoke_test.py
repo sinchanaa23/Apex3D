@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
-from backend.reconstruction import ReconstructionSettings, reconstruct  # noqa: E402
+from backend.reconstruction import ReconstructionSettings, reconstruct_detailed  # noqa: E402
 
 
 def preview(mesh, path: Path) -> None:
@@ -67,7 +67,7 @@ def main() -> None:
         out = out_root / name
         out.mkdir(parents=True, exist_ok=True)
         t0 = time.perf_counter()
-        res = reconstruct(img, settings)
+        res = reconstruct_detailed(img, settings)
         wall = time.perf_counter() - t0
         res.processed_image.save(out / "input_processed.png")
         sizes = {}

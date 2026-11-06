@@ -1,6 +1,5 @@
-// What the frontend expects from each endpoint in the team workplan's API contract.
-// Person C owns the real formats. This file and API_EXPECTATIONS.md are the single
-// place to change if they differ. All probabilities and rates are fractions from 0 to 1.
+// The shapes the pages use. adapter.ts translates Person C's API into these, so a backend
+// format change only touches that file. All probabilities and rates are fractions from 0 to 1.
 
 export type ConfidenceState = 'confident' | 'ambiguous' | 'rejected'
 
@@ -41,13 +40,14 @@ export type Viewpoint = 'front' | 'front_three_quarter' | 'side' | 'rear' | 'rea
 export interface Reference {
   id: string
   image_url: string
+  thumb_url?: string | null
   source: string
   source_url?: string | null
   author?: string | null
   licence?: string | null
   licence_url?: string | null
   viewpoint?: Viewpoint | null
-  /** "confirmed": the classifier's Top-k contains the confirmed class. Anything else is approximate. */
+  /** "confirmed": the backend matched it to the model. Anything else is approximate. */
   match: 'confirmed' | 'approximate' | 'user'
 }
 
@@ -67,6 +67,7 @@ export interface JobResult {
   asset_id: string
   files: AssetFile[]
   generation_seconds?: number | null
+  validation?: ValidationReport | null
 }
 
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed'
@@ -84,7 +85,9 @@ export interface Job {
 
 export interface ValidationReport {
   watertight?: boolean | null
-  non_manifold_edges?: number | null
+  manifold?: boolean | null
+  readiness?: string | null
+  notes?: string[] | null
   degenerate_faces?: number | null
   connected_components?: number | null
   vertices?: number | null
@@ -109,6 +112,10 @@ export interface ClassifierMetrics {
   top1_detector_crop?: number | null
   top5_detector_crop?: number | null
   test_images?: number | null
+  make_top1?: number | null
+  macro_f1?: number | null
+  val_top1?: number | null
+  val_top5?: number | null
 }
 export interface DetectionMetrics {
   rows: { model: string; mean_iou: number; map: number; cpu_ms?: number | null }[]
@@ -121,10 +128,32 @@ export interface AblationMetrics {
   baseline_top1?: number | null
 }
 export interface OptimisationMetrics {
-  rows: { variant: string; size_mb: number; cpu_ms?: number | null; gpu_ms?: number | null; top1?: number | null }[]
+  rows: {
+    variant: string
+    size_mb: number
+    cpu_ms?: number | null
+    gpu_ms?: number | null
+    top1?: number | null
+    top5?: number | null
+    /** How often this variant's answer matches the original model's. */
+    agreement?: number | null
+    note?: string | null
+  }[]
+}
+export interface CalibrationMetrics {
+  temperature: number
+  rows: { metric: string; before: number | null; after: number | null }[]
+}
+export interface StateMetrics {
+  rows: { state: ConfidenceState; share: number; accuracy: number | null }[]
+  rule?: string | null
+}
+export interface RunInfo {
+  rows: { label: string; value: string }[]
 }
 export interface RobustnessMetrics {
-  rows: { perturbation: string; severity: number; top1: number }[]
+  /** Severity is null when the file gives one result per perturbation. */
+  rows: { perturbation: string; severity: number | null; top1: number }[]
 }
 export interface ConfidenceMetrics {
   rows: { threshold: number; coverage: number; accuracy: number }[]
@@ -138,6 +167,8 @@ export interface FailureCasesMetrics {
 }
 
 export interface MetricsResponse {
+  /** The backend's explanation when no metrics file exists yet. */
+  message?: string | null
   classifier?: MaybeSection<ClassifierMetrics>
   detection?: MaybeSection<DetectionMetrics>
   comparison?: MaybeSection<ComparisonMetrics>
@@ -147,4 +178,7 @@ export interface MetricsResponse {
   ablation?: MaybeSection<AblationMetrics>
   confused_pairs?: MaybeSection<ConfusedPairsMetrics>
   failure_cases?: MaybeSection<FailureCasesMetrics>
+  calibration?: MaybeSection<CalibrationMetrics>
+  states?: MaybeSection<StateMetrics>
+  run?: MaybeSection<RunInfo>
 }

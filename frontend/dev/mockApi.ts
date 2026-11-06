@@ -1,6 +1,8 @@
-// DEV ONLY. Test responses for `npm run dev:mock`, so the UI can be built before
-// Person C's endpoints exist. Registered only on the dev server, never in `npm run build`.
+// DEV ONLY. Test responses for `npm run dev:mock`, in the same format as Person C's API
+// (docs/API_CONTRACT.md), so the UI's states can be exercised without models or a GPU.
+// Registered only on the dev server, never in `npm run build`.
 // Change a scenario from the browser: GET /__mock/set?recognize=ambiguous
+import { readFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 
@@ -9,7 +11,7 @@ const scenario: Record<string, string> = {
   classical: 'ok', // ok | error
   references: 'ok', // ok | empty | error
   job: 'ok', // ok | fail
-  metrics: 'partial', // partial | full | none | malformed | error
+  metrics: 'partial', // partial | full | persona | none | malformed | error
 }
 
 const placeholder = (text: string, hue = 24, w = 640, h = 420) =>
@@ -18,94 +20,133 @@ const placeholder = (text: string, hue = 24, w = 640, h = 420) =>
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="hsl(${hue} 18% 18%)"/><text x="50%" y="50%" fill="#c3c2b7" font-family="monospace" font-size="24" text-anchor="middle">MOCK: ${text}</text></svg>`,
   )
 
-const top5 = [
-  { class_id: 11, label: 'MOCK Coupe Alpha 2011', probability: 0.71 },
-  { class_id: 12, label: 'MOCK Coupe Alpha 2009', probability: 0.14 },
-  { class_id: 40, label: 'MOCK Sedan Beta 2012', probability: 0.06 },
-  { class_id: 77, label: 'MOCK Hatchback Gamma 2010', probability: 0.03 },
-  { class_id: 103, label: 'MOCK Convertible Delta 2007', probability: 0.02 },
-]
+const predictions = [
+  { class_id: 11, class_name: 'MOCK Coupe Alpha 2011', probability: 0.71 },
+  { class_id: 12, class_name: 'MOCK Coupe Alpha 2009', probability: 0.14 },
+  { class_id: 40, class_name: 'MOCK Sedan Beta 2012', probability: 0.06 },
+  { class_id: 77, class_name: 'MOCK Hatchback Gamma 2010', probability: 0.03 },
+  { class_id: 103, class_name: 'MOCK Convertible Delta 2007', probability: 0.02 },
+].map((p) => ({ ...p, make: 'MOCK', model: 'MOCK', year: 2011, body_style: 'Coupe' }))
 
 function recognizeBody(state: string) {
   const base = {
-    image_size: { width: 1000, height: 1000 },
-    detection: { box: [120, 280, 880, 760], label: 'car', score: 0.98 },
+    success: true,
+    car_detected: true,
+    crop_used: 'detected_bbox',
+    bounding_box: { x1: 120, y1: 280, x2: 880, y2: 760, confidence: 0.98, label: 'car' },
+    all_boxes: [],
     timings_ms: { detection: 412, classification: 96, total: 540 },
   }
+  const probabilities = (values: number[]) => predictions.map((p, i) => ({ ...p, probability: values[i] }))
   if (state === 'nocar') {
-    return { ...base, detection: null, top5, confidence: { state: 'rejected', top1: 0.22, margin: 0.03, reason: 'No vehicle detected. The full frame was classified.' } }
+    return {
+      ...base,
+      car_detected: false,
+      crop_used: 'full_frame',
+      bounding_box: null,
+      predictions: probabilities([0.18, 0.12, 0.09, 0.07, 0.05]),
+      confidence_state: 'rejected',
+      confidence_score: 0.18,
+      margin: 0.06,
+      message: 'Low confidence: Vehicle may be outside the taxonomy, or poorly visible.',
+    }
   }
   if (state === 'ambiguous') {
     return {
       ...base,
-      top5: [{ ...top5[0], probability: 0.41 }, { ...top5[1], probability: 0.38 }, ...top5.slice(2)],
-      confidence: { state, top1: 0.41, margin: 0.03, reason: 'The top two classes are too close to separate.' },
+      predictions: probabilities([0.41, 0.38, 0.06, 0.03, 0.02]),
+      confidence_state: state,
+      confidence_score: 0.41,
+      margin: 0.03,
+      message: 'Ambiguous classification: Multiple closely matching model years or trim levels detected.',
     }
   }
   if (state === 'rejected') {
     return {
       ...base,
-      top5: top5.map((p, i) => ({ ...p, probability: [0.18, 0.12, 0.09, 0.07, 0.05][i] })),
-      confidence: { state, top1: 0.18, margin: 0.06, reason: 'Confidence is below the rejection threshold.' },
+      predictions: probabilities([0.18, 0.12, 0.09, 0.07, 0.05]),
+      confidence_state: state,
+      confidence_score: 0.18,
+      margin: 0.06,
+      message: 'Low confidence: Vehicle may be outside the taxonomy, or poorly visible.',
     }
   }
-  return { ...base, top5, confidence: { state: 'confident', top1: 0.71, margin: 0.57, reason: null } }
+  return { ...base, predictions, confidence_state: 'confident', confidence_score: 0.71, margin: 0.57, message: 'High-confidence vehicle identification.' }
 }
 
 const classicalBody = {
-  steps: ['Original', 'CLAHE', 'Canny edges', 'Contours', 'ROI', 'HSV', 'HOG', 'LBP'].map((title, i) => ({
-    key: title.toLowerCase(),
-    title,
-    image: placeholder(title, i * 40),
-    caption: i === 1 ? 'Contrast limited equalisation on LAB luminance.' : null,
-  })),
+  success: true,
+  intermediate_images: Object.fromEntries(['original', 'clahe', 'edges', 'contours', 'largest_contour_roi', 'hog_visualization'].map((key, i) => [key, placeholder(key, i * 50)])),
   features: {
-    aspect_ratio: 1.58,
-    extent: 0.71,
-    solidity: 0.88,
-    hu_moment_1: 0.00213,
-    hsv_histogram: Array.from({ length: 32 }, (_, i) => Math.abs(Math.sin(i / 3))),
-    hog_descriptor: Array.from({ length: 3780 }, () => 0.1),
-    lbp_histogram: Array.from({ length: 26 }, (_, i) => (i % 7) / 7),
+    geometric: { aspect_ratio: 1.58, extent: 0.71, solidity: 0.88, contour_area: 1000, perimeter: 500, hu_moments: [0.2, 0.01, 0.002, 0.001, 0, 0, 0] },
+    hog: { vector_length: 3780, mean: 0.05, std: 0.08, feature_sample: [0.1, 0.04, 0, 0.2, 0.15] },
+    lbp: { num_points: 24, radius: 3, histogram: Array.from({ length: 26 }, (_, i) => (i % 7) / 7) },
+    color_hsv: { mean_hue: 24, mean_saturation: 142, mean_value: 185, hue_histogram: Array.from({ length: 32 }, (_, i) => Math.abs(Math.sin(i / 3))) },
   },
-  timings_ms: { total: 180 },
+  timings_ms: { clahe: 8, hog: 24, total: 180 },
 }
 
-const views = ['front', 'front_three_quarter', 'side', 'rear', 'rear_three_quarter', null]
+const views = ['front', 'front_three_quarter', 'side', 'rear', 'rear_three_quarter', 'unknown']
 const references = Array.from({ length: 8 }, (_, i) => ({
-  id: `ref-${i}`,
+  id: `wm_${i}`,
+  title: `File:Mock reference ${i}.jpg`,
   image_url: placeholder(`reference ${i}`, 200 + i * 15),
-  source: 'Wikimedia Commons',
-  source_url: 'https://commons.wikimedia.org/',
+  thumb_url: placeholder(`reference ${i}`, 200 + i * 15),
+  source: 'wikimedia_commons',
+  license: i % 2 ? 'CC BY-SA 4.0' : 'CC BY 2.0',
+  license_url: 'https://creativecommons.org/licenses/',
   author: `Mock author ${i}`,
-  licence: i % 2 ? 'CC BY-SA 4.0' : 'CC BY 2.0',
-  licence_url: 'https://creativecommons.org/licenses/',
   viewpoint: views[i % views.length],
-  match: i % 3 === 2 ? 'approximate' : 'confirmed',
+  viewpoint_confidence: 0.5,
+  match_score: 0.85,
+  is_approximate: i % 3 === 2,
 }))
 
-const section = <T,>(file: string, data: T) => ({ source: `notebooks/outputs/${file}`, generated_at: '2026-11-06T00:00:00Z', data })
 const perturbations = ['brightness', 'low_light', 'blur', 'noise', 'low_resolution', 'occlusion']
+const flatMetrics = {
+  test_top1_acc: 0.5,
+  test_top5_acc: 0.75,
+  detector_mAP50: 0.4,
+  detector_mean_iou: 0.5,
+  model_size_mb: 110,
+  quantized_size_mb: 29,
+  inference_time_gpu_ms: 12,
+  inference_time_cpu_ms: 180,
+  inference_time_quantized_cpu_ms: 70,
+  robustness: { noise_gaussian_top1: 0.4, blur_motion_top1: 0.38, brightness_low_top1: 0.42, occlusion_synthetic_top1: 0.3 },
+  comparison: { classical_svm_top1: 0.2, deep_convnext_top1: 0.5, hybrid_fusion_top1: 0.52 },
+}
 const fullMetrics = {
-  classifier: section('classifier.json', { model: 'MOCK model', top1: 0.5, top5: 0.75, top1_detector_crop: 0.48, top5_detector_crop: 0.73, test_images: 100 }),
-  detection: section('detection.json', { rows: [{ model: 'MOCK R-CNN A', mean_iou: 0.5, map: 0.4, cpu_ms: 900 }, { model: 'MOCK R-CNN B', mean_iou: 0.45, map: 0.35, cpu_ms: 300 }] }),
-  comparison: section('comparison.json', { rows: [{ approach: 'MOCK Classical', top1: 0.2, top5: 0.4, inference_ms: 90, size_mb: 12 }, { approach: 'MOCK Deep', top1: 0.5, top5: 0.75, inference_ms: 60, size_mb: 110 }, { approach: 'MOCK Hybrid', top1: 0.52, top5: 0.76, inference_ms: 150, size_mb: 122 }] }),
-  optimisation: section('optimisation.json', { rows: [{ variant: 'MOCK Original', size_mb: 110, cpu_ms: 180, gpu_ms: 12, top1: 0.5 }, { variant: 'MOCK INT8 ONNX', size_mb: 29, cpu_ms: 70, gpu_ms: null, top1: 0.49 }] }),
-  robustness: section('robustness.json', { rows: perturbations.flatMap((perturbation, p) => [0, 1, 2, 3].map((severity) => ({ perturbation, severity, top1: 0.5 - severity * (0.03 + p * 0.015) }))) }),
-  confidence: section('confidence.json', { chosen_threshold: 0.5, rows: Array.from({ length: 10 }, (_, i) => ({ threshold: i / 10, coverage: 1 - i * 0.09, accuracy: 0.5 + i * 0.04 })) }),
-  ablation: section('ablation.json', { baseline_top1: 0.5, rows: [{ removed: 'MOCK Detector crop', top1: 0.45 }, { removed: 'MOCK CLAHE', top1: 0.49 }, { removed: 'MOCK Augmentation', top1: 0.42, note: 'Fewer epochs' }] }),
-  confused_pairs: section('confusion.json', { rows: [{ a: 'MOCK Coupe 2011', b: 'MOCK Coupe 2009', count: 9 }, { a: 'MOCK Sedan 2012', b: 'MOCK Sedan 2010', count: 6 }] }),
-  failure_cases: section('failures.json', { cases: [{ title: 'MOCK heavy occlusion', image: placeholder('failure 1'), predicted: 'MOCK Sedan', actual: 'MOCK Coupe', explanation: 'Mock explanation.' }] }),
+  ...flatMetrics,
+  model_name: 'MOCK model',
+  test_images: 100,
+  test_top1_acc_detector_crop: 0.48,
+  test_top5_acc_detector_crop: 0.73,
+  generated_at: '2026-11-06T00:00:00Z',
+  robustness: { rows: perturbations.flatMap((perturbation, p) => [0, 1, 2, 3].map((severity) => ({ perturbation, severity, top1: 0.5 - severity * (0.03 + p * 0.015) }))) },
+  confidence: { chosen_threshold: 0.5, rows: Array.from({ length: 10 }, (_, i) => ({ threshold: i / 10, coverage: 1 - i * 0.09, accuracy: 0.5 + i * 0.04 })) },
+  ablation: { baseline_top1: 0.5, rows: [{ removed: 'MOCK Detector crop', top1: 0.45 }, { removed: 'MOCK CLAHE', top1: 0.49 }, { removed: 'MOCK Augmentation', top1: 0.42, note: 'Fewer epochs' }] },
+  confused_pairs: { rows: [{ a: 'MOCK Coupe 2011', b: 'MOCK Coupe 2009', count: 9 }, { a: 'MOCK Sedan 2012', b: 'MOCK Sedan 2010', count: 6 }] },
+  failure_cases: { cases: [{ title: 'MOCK heavy occlusion', image: placeholder('failure 1'), predicted: 'MOCK Sedan', actual: 'MOCK Coupe', explanation: 'Mock explanation.' }] },
 }
 
 function metricsBody(state: string) {
-  if (state === 'none') return Object.fromEntries(Object.keys(fullMetrics).map((key) => [key, 'not available']))
-  if (state === 'malformed') return { ...fullMetrics, comparison: section('comparison.json', { nope: true }), robustness: section('r.json', { rows: 4 }) }
-  if (state === 'partial') return { ...fullMetrics, ablation: 'not available', failure_cases: 'not available' }
-  return fullMetrics
+  // Person A's real saved files, served the way the backend would serve them once metrics.json combines both.
+  if (state === 'persona') {
+    const read = (name: string) => JSON.parse(readFileSync(new URL(`../src/api/fixtures/${name}`, import.meta.url), 'utf-8'))
+    return {
+      status: 'available',
+      source_file: 'metrics.json',
+      message: 'MOCK',
+      metrics: { classifier_metrics: read('person_a_classifier_metrics.json'), optimization_metrics: read('person_a_optimization_metrics.json') },
+    }
+  }
+  if (state === 'none') return { status: 'not available', message: 'MOCK: metrics have not been generated yet.', metrics: null }
+  const metrics = state === 'full' ? fullMetrics : state === 'malformed' ? { ...fullMetrics, ablation: { rows: 4 }, confidence: { nope: true } } : flatMetrics
+  return { status: 'available', source_file: 'metrics.json', message: 'MOCK', metrics }
 }
 
-/** A blocky GLB with vertex colours and no normals, the same kind of file trimesh writes for TripoSR. */
+/** A blocky GLB with vertex colours and no normals, the same kind of file trimesh writes. */
 function mockGlb(): Buffer {
   const boxes = [
     { min: [-1, 0.2, -0.45], max: [1, 0.55, 0.45], color: [0.75, 0.3, 0.15] },
@@ -169,27 +210,44 @@ function mockGlb(): Buffer {
 
 const jobs = new Map<string, number>()
 function jobBody(id: string) {
-  const age = Date.now() - (jobs.get(id) ?? 0)
+  const created = jobs.get(id) ?? 0
+  const age = Date.now() - created
+  const iso = (ms: number) => new Date(ms).toISOString()
+  const base = { job_id: id, created_at: iso(created), error: null, assets: null, validation: null }
   const logs = ['Job accepted']
-  if (age < 2500) return { id, status: 'queued', queue_position: age < 1200 ? 2 : 1, logs }
+  if (age < 2500) return { ...base, status: 'queued', stage: 'waiting', progress: 0, queue_position: age < 1200 ? 2 : 1, logs }
   logs.push('Removing background', 'Running reconstruction')
-  if (age < 5500) return { id, status: 'running', stage: 'Reconstructing mesh', logs }
-  if (scenario.job === 'fail') return { id, status: 'failed', logs, error: 'GPU ran out of memory while generating the mesh.' }
+  if (age < 5500) return { ...base, status: 'running', stage: 'triposr_inference', progress: 0.6, queue_position: 0, logs, started_at: iso(created + 2500) }
+  if (scenario.job === 'fail') return { ...base, status: 'failed', stage: 'failed', progress: 0, queue_position: 0, logs, error: 'GPU ran out of memory while generating the mesh.' }
   logs.push('Validating mesh', 'Exporting GLB, OBJ and STL')
   return {
-    id,
-    status: 'succeeded',
-    stage: 'Done',
+    ...base,
+    status: 'completed',
+    stage: 'done',
+    progress: 1,
+    queue_position: 0,
     logs,
-    result: {
-      asset_id: id,
-      generation_seconds: 3.1,
-      files: [
-        { name: 'model.glb', format: 'glb', size_bytes: mockGlb().length },
-        { name: 'model.obj', format: 'obj', size_bytes: 2100 },
-        { name: 'model.stl', format: 'stl', size_bytes: 1900 },
-        { name: 'validation.json', format: 'json', size_bytes: 180 },
-      ],
+    started_at: iso(created + 2500),
+    completed_at: iso(created + 5500),
+    assets: {
+      glb_url: `/api/assets/${id}/mesh.glb`,
+      obj_url: `/api/assets/${id}/mesh.obj`,
+      stl_url: `/api/assets/${id}/mesh.stl`,
+      validation_report_url: `/api/assets/${id}/validation.json`,
+    },
+    validation: {
+      is_watertight: false,
+      is_manifold: false,
+      vertex_count: 32,
+      face_count: 48,
+      degenerate_faces: 0,
+      connected_components: 4,
+      has_vertex_colors: true,
+      has_uv_texture: false,
+      bounding_box_extents: [2, 0.85, 1],
+      asset_readiness: 'needs_repair',
+      scale_status: 'unknown',
+      notes: ['MOCK note: unseen sides were inferred from a single view.'],
     },
   }
 }
@@ -226,41 +284,49 @@ export function mockApi(): Plugin {
         const has = (field: string) => body.includes(`name="${field}"`)
 
         if (path === '/api/recognize' && req.method === 'POST') {
-          if (!has('image')) return send(res, 422, { detail: 'image field missing' })
-          if (scenario.recognize === 'error') return send(res, 415, { detail: 'The server could not decode that image.' })
+          if (!has('file')) return send(res, 422, { detail: 'file field missing' })
+          if (scenario.recognize === 'error') return send(res, 422, { detail: 'Failed to decode image file. File may be corrupted.' })
           return send(res, 200, recognizeBody(scenario.recognize), 1200)
         }
         if (path === '/api/classical' && req.method === 'POST') {
-          if (!has('image')) return send(res, 422, { detail: 'image field missing' })
+          if (!has('file')) return send(res, 422, { detail: 'file field missing' })
           if (scenario.classical === 'error') return send(res, 500, { detail: 'Classical pipeline failed on this image.' })
           return send(res, 200, classicalBody, 900)
         }
         if (path === '/api/references' && req.method === 'GET') {
           if (scenario.references === 'error') return send(res, 503, { detail: 'Wikimedia Commons could not be reached.' })
-          return send(res, 200, { query: 'MOCK query', candidates: scenario.references === 'empty' ? [] : references }, 900)
+          const candidates = scenario.references === 'empty' ? [] : references
+          return send(res, 200, { success: true, query: 'MOCK query', total_candidates: candidates.length, candidates }, 900)
         }
         if (path === '/api/references/upload' && req.method === 'POST') {
-          if (!has('images')) return send(res, 422, { detail: 'images field missing' })
-          const id = `user-${Date.now()}`
-          return send(res, 200, { candidates: [{ id, image_url: placeholder('your upload', 120), source: 'Your upload', match: 'user', viewpoint: null }] })
+          if (!has('file')) return send(res, 422, { detail: 'file field missing' })
+          const candidate = {
+            id: `upload_${Date.now()}`,
+            title: 'photo.jpg',
+            image_url: placeholder('your upload', 120),
+            thumb_url: placeholder('your upload', 120),
+            source: 'manual_upload',
+            license: 'User Contributed (Personal)',
+            author: 'Current User',
+            viewpoint: 'unknown',
+            is_approximate: false,
+          }
+          return send(res, 200, { success: true, candidate })
         }
         if (path === '/api/reconstruct' && req.method === 'POST') {
-          if (!has('image') && !has('reference_id')) return send(res, 422, { detail: 'image or reference_id required' })
+          if (!has('file') && !has('image_url')) return send(res, 400, { detail: "Either a 'file' upload or an 'image_url' must be supplied." })
           const id = `job-${Date.now()}`
           jobs.set(id, Date.now())
-          return send(res, 200, { job_id: id })
+          return send(res, 202, { job_id: id, status: 'queued', queue_position: 2 })
         }
         const job = path.match(/^\/api\/jobs\/(.+)$/)
         if (job) {
-          if (!jobs.has(job[1])) return send(res, 404, { detail: 'Job not found. It may have been cleaned up.' })
+          if (!jobs.has(job[1])) return send(res, 404, { detail: `Job '${job[1]}' not found.` })
           return send(res, 200, jobBody(job[1]), 100)
         }
         const asset = path.match(/^\/api\/assets\/([^/]+)\/(.+)$/)
         if (asset) {
-          if (asset[2] === 'validation.json') {
-            return send(res, 200, { watertight: false, non_manifold_edges: 3, degenerate_faces: 0, connected_components: 4, vertices: 32, faces: 48, has_texture: false, has_vertex_colors: true })
-          }
-          if (asset[2] === 'model.glb') {
+          if (asset[2] === 'mesh.glb') {
             res.setHeader('content-type', 'model/gltf-binary')
             return res.end(mockGlb())
           }
