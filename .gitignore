@@ -44,6 +44,12 @@ data/stanford_cars/
 datasets/
 
 # 3D assets & exports (Rule: Keep generated meshes out of git)
+.ipynb_checkpoints/
+
+# Large files: dataset, weights, generated meshes (share through the team drive)
+data/
+artifacts/
+outputs/
 *.glb
 *.obj
 *.stl
@@ -75,3 +81,11 @@ desktop.ini
 *.sublime-project
 *.sublime-workspace
 
+
+# Third-party clones (set up with scripts/setup_triposr.ps1)
+third_party/
+
+# Local tooling
+cloudflared.exe
+*.log
+tools/
