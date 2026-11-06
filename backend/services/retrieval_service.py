@@ -21,6 +21,7 @@ from backend.config import (
     REFERENCES_DIR,
 )
 from backend.data.stanford_cars_classes import get_class_info
+from backend.data.sample_references import get_sample_references_for_query
 from backend.models import ReferenceCandidate, ReferencesResponse
 from backend.database import save_cached_reference, get_cached_references
 
@@ -103,6 +104,11 @@ class ReferenceRetrievalService:
 
         # Fetch candidates from Wikimedia Commons API
         raw_candidates = self._fetch_wikimedia(search_query, class_info, limit=limit * 2)
+
+        # Fallback to local reference database if network or API returns no results
+        if not raw_candidates:
+            logger.info("Wikimedia API returned 0 candidates (offline mode / network timeout). Using local reference fallback.")
+            raw_candidates = get_sample_references_for_query(class_id=class_id, query=search_query, limit=limit)
 
         # Perceptual hash deduplication
         deduped = self._deduplicate_by_phash(raw_candidates)
