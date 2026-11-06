@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { HeroScene } from '../components/hero/HeroScene'
 import { primaryButton, secondaryButton } from '../components/States'
 
 const STAGES = [
   { title: 'Recognise', body: 'An R-CNN finds the car. A fine-tuned classifier suggests make, model and year from 196 classes, and says when it is unsure.' },
   { title: 'Confirm', body: 'You accept or correct the identity. The classical CV view shows what the image-processing stages saw.' },
-  { title: 'Reference', body: 'Openly licensed photos of that model are checked by the classifier and grouped by viewpoint, with attribution kept.' },
+  { title: 'Reference', body: 'Openly licensed photos of that model are found and grouped by viewpoint, with attribution kept. You choose which to use.' },
   { title: 'Reconstruct', body: 'TripoSR makes a mesh from one view. You inspect it, read its validation report, and export GLB, OBJ or STL.' },
 ]
 
@@ -20,26 +21,29 @@ const LIMITS = [
 export default function Home() {
   return (
     <div>
-      <section className="pt-6 sm:pt-14">
-        <h1 className="max-w-3xl text-5xl leading-[1.02] font-semibold tracking-tight sm:text-7xl">
-          Recognise.
-          <br />
-          Reconstruct.
-          <br />
-          <span className="text-accent">Create.</span>
-        </h1>
-        <p className="mt-6 max-w-xl text-lg text-ink-2">
-          Upload a photo of a car. Apex3D works out what it is, shows how sure it is, and helps you turn that identity into a draft 3D model.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/upload" className={primaryButton}>
-            Identify a car
-            <ArrowRight aria-hidden className="size-4" />
-          </Link>
-          <Link to="/lab" className={secondaryButton}>
-            See the evaluation
-          </Link>
+      <section className="grid grid-cols-[minmax(0,1fr)] items-center gap-4 pt-6 sm:pt-14 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:gap-0">
+        <div className="relative z-10 min-w-0">
+          <h1 className="max-w-3xl text-5xl leading-[1.02] font-semibold tracking-tight sm:text-7xl">
+            Recognise.
+            <br />
+            Reconstruct.
+            <br />
+            <span className="text-accent">Create.</span>
+          </h1>
+          <p className="mt-6 max-w-xl text-lg text-ink-2">
+            Upload a photo of a car. Apex3D works out what it is, shows how sure it is, and helps you turn that identity into a draft 3D model.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link to="/upload" className={primaryButton}>
+              Identify a car
+              <ArrowRight aria-hidden className="size-4" />
+            </Link>
+            <Link to="/lab" className={secondaryButton}>
+              See the evaluation
+            </Link>
+          </div>
         </div>
+        <HeroScene className="h-[22rem] sm:h-[30rem] lg:h-[38rem]" />
       </section>
 
       <section aria-label="How it works" className="mt-14 sm:mt-20">
@@ -82,6 +86,17 @@ export default function Home() {
         </ul>
         <p className="mt-6 text-xs text-ink-3">
           A research demonstration. Uploaded photos pass through a tunnel to a team laptop and are deleted after processing.
+        </p>
+        <p className="mt-2 text-xs text-ink-3">
+          Hero car: "Car Concept" by the{' '}
+          <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarConcept" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
+            Khronos Group
+          </a>
+          , from a public domain model by Unity Fan, modified. Licensed{' '}
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
+            CC BY 4.0
+          </a>
+          .
         </p>
       </section>
     </div>

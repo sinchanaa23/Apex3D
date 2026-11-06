@@ -1,0 +1,42 @@
+# Person A: training, optimisation and 3D reconstruction (Python 3.12).
+# Install CUDA PyTorch FIRST, from the PyTorch index (not PyPI):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# then:  pip install -r requirements-ml.txt
+# scripts/setup_gpu_env.ps1 does all of this.
+
+# classifier training + evaluation
+timm>=1.0
+scikit-learn
+scipy
+numpy
+pandas
+matplotlib
+seaborn
+tqdm
+pillow
+
+# notebooks
+jupyter
+nbconvert
+nbformat
+ipykernel
+
+# optimisation (01b)
+onnx
+onnxscript
+onnxruntime
+onnxconverter-common
+
+# TripoSR (MIT). Not installed as a package: scripts/setup_triposr.ps1 clones the source.
+# torchmcubes is replaced by backend/reconstruction/mcubes_shim.py (scikit-image), so no
+# C++/CUDA build is needed on Windows.
+omegaconf
+einops
+transformers<5
+huggingface-hub
+trimesh
+rembg
+scikit-image
+xatlas
+imageio[ffmpeg]
+pytest

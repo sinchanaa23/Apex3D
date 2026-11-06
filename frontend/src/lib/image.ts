@@ -35,9 +35,13 @@ export async function normaliseImage(source: File): Promise<NormalisedImage> {
   const sourceUrl = URL.createObjectURL(source)
   try {
     const img = new Image()
-    img.src = sourceUrl
     try {
-      await img.decode()
+      // The load event is used because img.decode() can stall in embedded browsers and background tabs.
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('decode failed'))
+        img.src = sourceUrl
+      })
     } catch {
       throw new Error("This photo couldn't be read. It may be damaged, or a HEIC file this browser can't open. Try a JPEG or PNG.")
     }

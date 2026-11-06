@@ -27,6 +27,7 @@ The judges come first: they will open a public link on their own phones, probabl
 | The job id is in the 3D Studio address | Lets a phone survive a reload or a dropped connection, and the result can be reopened from a link | Holding the job only in memory |
 | Polling keeps retrying through network drops | The job carries on at the server, so a Wi-Fi blip shouldn't look like a failure | Treating any failed poll as a failed job |
 | Photos are held in memory only | The proposal promises uploads aren't retained. The cost is that a reload loses the photo, and the page says so | Saving to browser storage |
+| The Home hero is a real 3D car, with its grid drawn in a shader | The grid is computed from each surface point's position, so it follows the real shape instead of sitting on top as a flat image. It also loads as a separate download, so the headline and buttons never wait for it | A looping video or a rendered image |
 | 3D code loads only when needed | three.js is about 70% of the JavaScript, and it would slow the core P5 flow on phones | One bundle |
 | Canvas draws on demand | Saves phone battery and heat while the mesh is still | Drawing continuously |
 | Fonts are bundled, with no external requests | The only server the app needs is the laptop, which also suits the privacy statement | Font CDN |
@@ -53,7 +54,7 @@ Dark and minimal, as the brief asks. Near-black surfaces, with one orange accent
 - **Type:** Instrument Sans for reading, JetBrains Mono for measured values, so numbers look like readouts.
 - **Status colours:** green, amber and red are used only for meaning, and always with an icon and a word, so colour-blind users get the same information.
 - **Charts:** one blue for a single series and blue plus orange for two, checked with a colour-vision validator against the chart background. Each chart has a table view. Robustness uses small multiples, because six lines on one chart would be hard to separate.
-- **Motion:** the detection box and home-page curve animate briefly. Both respect the reduced-motion setting.
+- **Motion:** the detection box, the home-page curve and the hero car animate. All respect the reduced-motion setting, and the hero car pauses when scrolled out of view.
 
 ## Phone behaviour
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { motion } from 'framer-motion'
 
 export interface Series {
   name: string
@@ -118,14 +119,19 @@ export function LineChart({ title, xLabel, xs, series, formatX = String, marker,
             </g>
           )}
           {series.map(({ name, color, values }) => (
-            <polyline
+            <motion.polyline
               key={name}
               fill="none"
               stroke={color}
               strokeWidth="2"
               strokeLinejoin="round"
               strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 4px ${color})` }}
               points={values.map((value, index) => `${x(xs[index])},${y(value)}`).join(' ')}
+              initial={{ pathLength: 0, opacity: 0 }}
+              whileInView={{ pathLength: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: 'easeInOut' }}
             />
           ))}
           {active != null && (

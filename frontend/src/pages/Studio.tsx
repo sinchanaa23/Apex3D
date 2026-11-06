@@ -1,29 +1,32 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { CircleCheck, CircleMinus, Download, TriangleAlert } from 'lucide-react'
-import { ApiError, assetUrl, getJob, getValidation, reconstruct } from '../api/client'
+import { ApiError, assetUrl, getJob, reconstruct } from '../api/client'
 import type { Job, JobResult, ValidationReport } from '../api/types'
 import { Attribution } from '../components/Attribution'
 import MeshViewer from '../components/MeshViewer'
-import { Card, EmptyState, ErrorNotice, PageHeader, PageLoading, Spinner, primaryButton, secondaryButton } from '../components/States'
+import { Card, EmptyState, ErrorNotice, PageHeader, PageLoading, Spinner, hudPrimary as primaryButton, hudSecondary as secondaryButton } from '../components/States'
+import { PhotoUpload } from '../components/PhotoUpload'
+import { ScanFrame } from '../components/hud/ScanFrame'
+import { rise, stagger } from '../components/hud/PageShell'
 import { bytes } from '../lib/format'
-import { useResource } from '../lib/useResource'
 import { useSession } from '../state/session'
 
 function useStartJob() {
-  const { photo, identity, input } = useSession()
+  const { photo, input } = useSession()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const source = input?.kind === 'photo' && photo ? { image: photo.file } : input?.kind === 'reference' ? { referenceId: input.reference.id } : null
+  const source = input?.kind === 'photo' && photo ? { image: photo.file } : input?.kind === 'reference' ? { reference: input.reference } : null
 
   async function start() {
     if (!source) return
     setBusy(true)
     setError(null)
     try {
-      const { job_id } = await reconstruct(source, identity?.class_id)
+      const { job_id } = await reconstruct(source)
       navigate(`/studio/${encodeURIComponent(job_id)}`)
     } catch (reason) {
       setError(reason instanceof ApiError ? reason.message : 'The job could not be started.')
@@ -50,20 +53,25 @@ function StartPanel() {
 
   if (!canStart || !inputUrl) {
     return (
-      <EmptyState
-        title="Nothing to reconstruct yet"
-        body="Upload a car photo, or add a reference, and choose the view to build a mesh from."
-        action={{ to: '/upload', label: 'Upload a photo' }}
-      />
+      <div className="mx-auto max-w-3xl">
+        <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro="Add a car photo to build a draft mesh from. You can also start from a reference photo instead." />
+        <PhotoUpload />
+        <p className="mt-6 text-sm text-ink-3">
+          Prefer a reference photo?{' '}
+          <Link to="/references" className="text-ink underline underline-offset-4">
+            Open Reference Studio
+          </Link>
+        </p>
+      </div>
     )
   }
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="3D Studio" intro={identity ? `Generate a draft mesh of ${identity.label} from the view below.` : 'Generate a draft mesh from the view below.'} />
-      <div className="overflow-hidden rounded-xl border border-line bg-surface">
+      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `Generate a draft mesh of ${identity.label} from the view below.` : 'Generate a draft mesh from the view below.'} />
+      <ScanFrame>
         <img src={inputUrl} alt="Reconstruction input" className="mx-auto block max-h-[50dvh] w-auto max-w-full" />
-      </div>
+      </ScanFrame>
       {input?.kind === 'reference' && (
         <div className="mt-2">
           <Attribution reference={input.reference} />
@@ -108,7 +116,7 @@ function useJob(id: string) {
         if (next.status === 'queued' || next.status === 'running') timer = setTimeout(poll, 1500)
       } catch (reason) {
         if (controller.signal.aborted) return
-        if (reason instanceof ApiError && (reason.kind === 'http' || reason.kind === 'parse') && reason.status !== undefined && reason.status < 500) {
+        if (reason instanceof ApiError && (reason.kind === 'parse' || (reason.kind === 'http' && reason.status !== undefined && reason.status < 500))) {
           setFatal(reason.message)
         } else {
           setLost(true)
@@ -129,13 +137,19 @@ function useJob(id: string) {
 function JobProgress({ job, lost }: { job: Job; lost: boolean }) {
   return (
     <Card>
-      <div aria-live="polite">
+      <div aria-live="polite" className="flex flex-wrap items-center justify-between gap-4">
         {job.status === 'queued' ? (
           <Spinner label={job.queue_position != null ? `In the queue, position ${job.queue_position}` : 'In the queue'} />
         ) : (
           <Spinner label={job.stage ?? 'Generating mesh'} />
         )}
+        {job.status === 'queued' && job.queue_position != null && (
+          <p className="num font-mono text-4xl font-semibold text-accent" aria-hidden>
+            #{job.queue_position}
+          </p>
+        )}
       </div>
+      <div className="scanbar mt-4" />
       {lost && <p className="mt-2 text-sm text-warning">Connection lost. Retrying. The job carries on while this page reconnects.</p>}
       <JobLog logs={job.logs} />
     </Card>
@@ -145,11 +159,20 @@ function JobProgress({ job, lost }: { job: Job; lost: boolean }) {
 function JobLog({ logs }: { logs?: string[] }) {
   if (!logs?.length) return null
   return (
-    <ol className="mt-4 max-h-56 overflow-y-auto rounded-lg bg-page p-3 font-mono text-xs text-ink-2">
+    <ol className="mt-4 max-h-56 overflow-y-auto rounded-lg border border-line bg-page p-3 font-mono text-xs text-ink-2">
       {logs.map((line, index) => (
-        <li key={index} className="py-0.5">
+        <motion.li
+          key={index}
+          initial={{ opacity: 0, x: -6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.25 }}
+          className={`py-0.5 ${index === logs.length - 1 ? 'cursor-blink text-ink' : ''}`}
+        >
+          <span aria-hidden className="mr-2 text-accent">
+            ›
+          </span>
           {line}
-        </li>
+        </motion.li>
       ))}
     </ol>
   )
@@ -158,13 +181,13 @@ function JobLog({ logs }: { logs?: string[] }) {
 function Check({ label, value, good }: { label: string; value: string; good?: boolean | null }) {
   const Icon = good ? CircleCheck : CircleMinus
   return (
-    <div className="flex items-center justify-between gap-4 py-2 text-sm">
+    <motion.div variants={rise} className="flex items-center justify-between gap-4 py-2 text-sm">
       <dt className="flex items-center gap-2 text-ink-2">
         {good != null && <Icon aria-hidden className={`size-4 ${good ? 'text-good' : 'text-warning'}`} />}
         {label}
       </dt>
       <dd className="num font-mono text-right">{value}</dd>
-    </div>
+    </motion.div>
   )
 }
 
@@ -173,11 +196,14 @@ const count = (value?: number | null) => (value == null ? NOT_REPORTED : value.t
 const yesNo = (value?: boolean | null) => (value == null ? NOT_REPORTED : value ? 'Yes' : 'No')
 const zeroIsGood = (value?: number | null) => (value == null ? null : value === 0)
 
-function ValidationRows({ report, seconds }: { report: ValidationReport | null; seconds?: number | null }) {
+const READINESS: Record<string, string> = { draft: 'Draft', needs_repair: 'Needs repair', unvalidated: 'Unvalidated' }
+
+function ValidationRows({ report, seconds }: { report: ValidationReport | null | undefined; seconds?: number | null }) {
   return (
-    <dl className="divide-y divide-line">
+    <motion.dl variants={stagger} initial="hidden" animate="show" className="divide-y divide-line">
+      <Check label="Asset readiness" value={report?.readiness ? (READINESS[report.readiness] ?? report.readiness) : NOT_REPORTED} />
       <Check label="Watertight" value={yesNo(report?.watertight)} good={report?.watertight} />
-      <Check label="Non-manifold edges" value={count(report?.non_manifold_edges)} good={zeroIsGood(report?.non_manifold_edges)} />
+      <Check label="Manifold" value={yesNo(report?.manifold)} good={report?.manifold} />
       <Check label="Degenerate faces" value={count(report?.degenerate_faces)} good={zeroIsGood(report?.degenerate_faces)} />
       <Check
         label="Connected components"
@@ -190,21 +216,21 @@ function ValidationRows({ report, seconds }: { report: ValidationReport | null; 
       <Check label="Vertex colours" value={yesNo(report?.has_vertex_colors)} />
       <Check label="Generation time" value={seconds == null ? NOT_REPORTED : `${seconds.toFixed(1)} s`} />
       <Check label="Real-world scale" value="Unknown" />
-    </dl>
+    </motion.dl>
   )
 }
 
 function Validation({ result }: { result: JobResult }) {
-  const reportFile = result.files.find((file) => file.format === 'json')
-  const report = useResource(
-    (signal) => (reportFile ? getValidation(result.asset_id, reportFile.name, signal) : Promise.resolve(null)),
-    `${result.asset_id}/${reportFile?.name}`,
-  )
   return (
     <Card title="Mesh validation">
-      {report.status === 'loading' && <Spinner label="Reading validation report" />}
-      {report.status === 'error' && <ErrorNotice title="Report unavailable" message={report.error} onRetry={report.reload} />}
-      {report.status === 'ready' && <ValidationRows report={report.data} seconds={result.generation_seconds} />}
+      <ValidationRows report={result.validation} seconds={result.generation_seconds} />
+      {result.validation?.notes && result.validation.notes.length > 0 && (
+        <ul className="mt-3 space-y-1 border-t border-line pt-3 text-xs text-ink-2">
+          {result.validation.notes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      )}
       <p className="mt-3 text-xs text-ink-3">
         These checks describe the file, not how accurate the shape is. No ground-truth 3D exists to compare against, so nothing here makes the mesh print-ready. Games need retopology, UVs and LODs. Printing needs repair, scaling and wall-thickness checks.
       </p>
@@ -250,7 +276,7 @@ function Compare() {
         )}
         {pack.map((reference) => (
           <li key={reference.id}>
-            <img src={reference.image_url} alt={`Reference from ${reference.source}`} className="aspect-[4/3] w-full rounded-lg bg-raised object-cover" />
+            <img src={reference.thumb_url ?? reference.image_url} alt={`Reference from ${reference.source}`} className="aspect-[4/3] w-full rounded-lg bg-raised object-cover" />
             <div className="mt-1">
               <Attribution reference={reference} />
             </div>
@@ -281,7 +307,7 @@ function JobView({ id }: { id: string }) {
 
   return (
     <div>
-      <PageHeader title="3D Studio" intro={identity ? `Draft mesh of ${identity.label}.` : undefined} />
+      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `Draft mesh of ${identity.label}.` : undefined} />
 
       {(job.status === 'queued' || job.status === 'running') && <JobProgress job={job} lost={lost} />}
 
