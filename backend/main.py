@@ -30,6 +30,7 @@ from backend.api import (
 from backend.services.detector_service import VehicleDetector
 from backend.services.classifier_service import VehicleClassifier
 from backend.services.reconstruction_service import ReconstructionManager
+from backend.services.cleanup_service import cleanup_old_storage
 
 logging.basicConfig(
     level=logging.INFO,
@@ -112,6 +113,17 @@ async def health_check():
         device=DEVICE,
         queue_size=queue_count,
     )
+
+
+@app.post(
+    "/api/maintenance/cleanup",
+    tags=["System"],
+    summary="Purge Stale Temporary Files",
+    description="Purges uploaded images and generated 3D files older than max_age_hours (default 1.0 hr). Preserves SQLite metadata.",
+)
+async def run_storage_cleanup(max_age_hours: float = 1.0):
+    report = cleanup_old_storage(max_age_hours=max_age_hours)
+    return {"status": "success", "cleanup_report": report}
 
 
 # -------------------------------------------------------------------------
