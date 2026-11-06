@@ -19,7 +19,6 @@ router = APIRouter(prefix="/api", tags=["Classical CV"])
 
 @router.post(
     "/classical",
-    response_model=ClassicalCVResponse,
     summary="Classical Computer Vision Feature Extraction & Visualisation",
     description="Computes CLAHE (LAB luminance), Canny edges, contour overlay, largest contour ROI, HOG visualization, LBP, HSV histogram, and geometric moments.",
 )
@@ -62,8 +61,25 @@ async def process_classical_cv(
     if all(v is not None for v in [bbox_x1, bbox_y1, bbox_x2, bbox_y2]):
         bbox = (bbox_x1, bbox_y1, bbox_x2, bbox_y2)
 
-    # 5. Execute Classical CV Service
+    # 5. Person B's pipeline (10 stages, already in the frontend's format). Falls back to the service if it fails.
+    try:
+        import cv2
+        import numpy as np
+        from backend.classical_cv.api import api_response
+
+        crop = image
+        if bbox is not None:
+            x1, y1, x2, y2 = [int(v) for v in bbox]
+            w, h = image.size
+            x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+            if (x2 - x1) > 10 and (y2 - y1) > 10:
+                crop = image.crop((x1, y1, x2, y2))
+        return api_response(cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2BGR))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except Exception:
+        logger.exception("Person B's classical pipeline failed, using the built-in service")
+
     service = ClassicalCVService.get_instance()
-    response = service.process(image, bbox=bbox)
-    return response
+    return service.process(image, bbox=bbox)
 

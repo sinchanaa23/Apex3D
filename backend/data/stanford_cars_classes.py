@@ -207,6 +207,16 @@ STANFORD_CARS_CLASSES: List[str] = [
     "smart fortwo Convertible 2012",
 ]
 
+# Person A's list is the order the trained model uses (docs/INTEGRATION_NOTES_A_TO_C.md). It replaces the list above.
+import json as _json
+from pathlib import Path as _Path
+
+_CLASS_FILE = _Path(__file__).resolve().parents[2] / "results" / "class_names.json"
+if _CLASS_FILE.exists():
+    _names = [row["name"] for row in sorted(_json.loads(_CLASS_FILE.read_text(encoding="utf-8")), key=lambda r: r["class_id"])]
+    if len(_names) == 196:
+        STANFORD_CARS_CLASSES = _names
+
 MULTI_WORD_MAKES = [
     "AM General",
     "Aston Martin",
