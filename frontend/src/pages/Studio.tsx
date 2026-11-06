@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CircleCheck, CircleMinus, Download, Library, TriangleAlert } from 'lucide-react'
@@ -6,12 +6,15 @@ import { ApiError, assetUrl, getJob, reconstruct } from '../api/client'
 import type { Job, JobResult, ValidationReport } from '../api/types'
 import { Attribution } from '../components/Attribution'
 import MeshViewer from '../components/MeshViewer'
+import { colourFromImage, proportionsFor } from '../lib/adapt'
 import { Card, EmptyState, ErrorNotice, PageHeader, PageLoading, Spinner, hudPrimary as primaryButton, hudSecondary as secondaryButton } from '../components/States'
 import { PhotoUpload } from '../components/PhotoUpload'
-import { ScanFrame } from '../components/hud/ScanFrame'
 import { rise, stagger } from '../components/hud/PageShell'
 import { bytes } from '../lib/format'
 import { useSession } from '../state/session'
+
+// Loaded on demand, so the 3D code stays out of the first download.
+const ShowcaseViewer = lazy(() => import('../components/ShowcaseViewer'))
 
 function useStartJob() {
   const { photo, input, identity } = useSession()
@@ -61,19 +64,31 @@ function SourceNote({ source, label }: { source?: Job['mesh_source']; label?: st
   )
 }
 
-function SingleViewNote() {
-  return <SourceNote />
-}
-
 function StartPanel() {
-  const { photo, identity, input } = useSession()
+  const { photo, identity, input, recognition } = useSession()
   const { canStart, start, busy, error } = useStartJob()
   const inputUrl = input?.kind === 'photo' ? photo?.url : input?.reference.image_url
+  const [paint, setPaint] = useState<string | null>(null)
+  const proportions = proportionsFor(identity?.label)
+
+  // The colour comes from the user's own photo, read in the browser. It is never sent anywhere.
+  useEffect(() => {
+    let current = true
+    setPaint(null)
+    if (photo) {
+      void colourFromImage(photo.url, recognition?.detection?.box, recognition?.image_size).then((colour) => {
+        if (current) setPaint(colour)
+      })
+    }
+    return () => {
+      current = false
+    }
+  }, [photo, recognition])
 
   if (!canStart || !inputUrl) {
     return (
       <div className="mx-auto max-w-3xl">
-        <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro="Add a car photo to build a draft mesh from. You can also start from a reference photo instead." />
+        <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro="Add a car photo to see a 3D car adapted to it. You can also start from a reference photo instead." />
         <PhotoUpload />
         <p className="mt-6 text-sm text-ink-3">
           Prefer a reference photo?{' '}
@@ -86,31 +101,83 @@ function StartPanel() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `Generate a draft mesh of ${identity.label} from the view below.` : 'Generate a draft mesh from the view below.'} />
-      <ScanFrame>
-        <img src={inputUrl} alt="Reconstruction input" className="mx-auto block max-h-[50dvh] w-auto max-w-full" />
-      </ScanFrame>
-      {input?.kind === 'reference' && (
-        <div className="mt-2">
-          <Attribution reference={input.reference} />
+    <div>
+      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `A 3D car in the style of ${identity.label}, adapted to your photo.` : 'A 3D car adapted to your photo.'} />
+      <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-start">
+        <div className="space-y-3">
+          <Suspense fallback={<PageLoading label="Loading the 3D car" />}>
+            <ShowcaseViewer paint={paint} proportions={proportions} />
+          </Suspense>
+          <p className="flex gap-2 text-sm text-ink-2">
+            <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+            <span>This is a designed showcase car, not a 3D copy of your car. Only the paint colour and body proportions come from your photo.</span>
+          </p>
+          <p className="text-xs text-ink-3">
+            Model: Car Concept by the Khronos Group, from a public domain model by Unity Fan, licensed CC BY 4.0. Materials and animation by Apex3D.
+          </p>
         </div>
-      )}
-      <div className="mt-4">
-        <SingleViewNote />
-      </div>
-      {error && (
-        <div className="mt-4">
-          <ErrorNotice title="Couldn't start the job" message={error} />
+        <div className="space-y-5">
+          <Card title="Taken from your photo">
+            <dl className="divide-y divide-line text-sm">
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt className="text-ink-2">Paint colour</dt>
+                <dd className="flex items-center gap-2 font-mono">
+                  {paint ? (
+                    <>
+                      <span aria-hidden className="size-4 rounded border border-line-strong" style={{ background: paint }} />
+                      {paint}
+                    </>
+                  ) : (
+                    'Reading'
+                  )}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt className="text-ink-2">Proportions</dt>
+                <dd className="text-right">{proportions.basis}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt className="text-ink-2">Matched car</dt>
+                <dd className="text-right">{identity ? identity.label : 'Not confirmed'}</dd>
+              </div>
+            </dl>
+            {!identity && (
+              <p className="mt-3 text-xs text-ink-3">
+                <Link to="/identity" className="text-ink underline underline-offset-4">
+                  Confirm the car
+                </Link>{' '}
+                to match the body style.
+              </p>
+            )}
+          </Card>
+
+          <Card title="Experimental: rebuild from a photo">
+            <div className="flex items-center gap-3">
+              <img src={inputUrl} alt="Reconstruction input" className="h-16 w-24 rounded-md bg-raised object-cover" />
+              <p className="text-sm text-ink-2">
+                TripoSR can rebuild a rough mesh from one image. It takes about 3 minutes and the shape is often lumpy, so treat it as a draft.
+              </p>
+            </div>
+            {input?.kind === 'reference' && (
+              <div className="mt-2">
+                <Attribution reference={input.reference} />
+              </div>
+            )}
+            {error && (
+              <div className="mt-3">
+                <ErrorNotice title="Couldn't start the job" message={error} />
+              </div>
+            )}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" disabled={busy} className={secondaryButton} onClick={() => void start()}>
+                {busy ? 'Starting' : 'Build experimental mesh'}
+              </button>
+              <Link to="/references" className={secondaryButton}>
+                Choose a different view
+              </Link>
+            </div>
+          </Card>
         </div>
-      )}
-      <div className="mt-5 flex flex-wrap gap-3">
-        <button type="button" disabled={busy} className={primaryButton} onClick={() => void start()}>
-          {busy ? 'Starting' : 'Generate mesh'}
-        </button>
-        <Link to="/references" className={secondaryButton}>
-          Choose a different view
-        </Link>
       </div>
     </div>
   )
@@ -326,7 +393,7 @@ function JobView({ id }: { id: string }) {
 
   return (
     <div>
-      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? (job.mesh_source === 'catalog' ? `Catalog model of ${identity.label}.` : `Draft mesh of ${identity.label}.`) : undefined} />
+      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? (job.mesh_source === 'catalog' ? `Catalog model of ${identity.label}.` : `Experimental mesh of ${identity.label}.`) : undefined} />
 
       {(job.status === 'queued' || job.status === 'running') && <JobProgress job={job} lost={lost} />}
 
