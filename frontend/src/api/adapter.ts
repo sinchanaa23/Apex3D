@@ -151,6 +151,7 @@ export interface WireJob {
   completed_at?: string | null
   logs?: string[]
   error?: string | null
+  mesh_source?: string | null
   assets?: Record<string, string> | null
   validation?: {
     is_watertight?: boolean
@@ -188,6 +189,7 @@ export function adaptJob(wire: WireJob): Job {
     queue_position: wire.queue_position ? wire.queue_position : null,
     logs: wire.logs,
     error: wire.error,
+    mesh_source: wire.mesh_source === 'catalog' || wire.mesh_source === 'reference' || wire.mesh_source === 'photo' ? wire.mesh_source : null,
     result:
       status === 'succeeded' && files.length
         ? {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CircleCheck, CircleMinus, Download, TriangleAlert } from 'lucide-react'
+import { CircleCheck, CircleMinus, Download, Library, TriangleAlert } from 'lucide-react'
 import { ApiError, assetUrl, getJob, reconstruct } from '../api/client'
 import type { Job, JobResult, ValidationReport } from '../api/types'
 import { Attribution } from '../components/Attribution'
@@ -14,12 +14,14 @@ import { bytes } from '../lib/format'
 import { useSession } from '../state/session'
 
 function useStartJob() {
-  const { photo, input } = useSession()
+  const { photo, input, identity } = useSession()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const source = input?.kind === 'photo' && photo ? { image: photo.file } : input?.kind === 'reference' ? { reference: input.reference } : null
+  const classId = identity?.class_id ?? null
+  const source =
+    input?.kind === 'photo' && photo ? { image: photo.file, classId } : input?.kind === 'reference' ? { reference: input.reference, classId } : null
 
   async function start() {
     if (!source) return
@@ -37,13 +39,30 @@ function useStartJob() {
   return { canStart: source != null, start, busy, error }
 }
 
-function SingleViewNote() {
+/** Says what the mesh was made from, so a ready-made model is never mistaken for a reconstruction of the user's photo. */
+function SourceNote({ source, label }: { source?: Job['mesh_source']; label?: string }) {
+  const car = label ?? 'the matched car'
+  if (source === 'catalog') {
+    return (
+      <p className="flex gap-2 text-sm text-ink-2">
+        <Library aria-hidden className="mt-0.5 size-4 shrink-0 text-accent" />
+        <span>Catalog model of {car}. It was made in advance, not built from your photo.</span>
+      </p>
+    )
+  }
   return (
     <p className="flex gap-2 text-sm text-ink-2">
       <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
-      <span>This is a single-view reconstruction. The sides the photo doesn't show are inferred, proportions aren't measured, and the scale is unknown.</span>
+      <span>
+        {source === 'reference' ? `Built from a reference photo of ${car}, not from your photo. ` : ''}This is a single-view reconstruction. The sides the photo doesn't show are inferred, proportions aren't
+        measured, and the scale is unknown.
+      </span>
     </p>
   )
+}
+
+function SingleViewNote() {
+  return <SourceNote />
 }
 
 function StartPanel() {
@@ -307,7 +326,7 @@ function JobView({ id }: { id: string }) {
 
   return (
     <div>
-      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `Draft mesh of ${identity.label}.` : undefined} />
+      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? (job.mesh_source === 'catalog' ? `Catalog model of ${identity.label}.` : `Draft mesh of ${identity.label}.`) : undefined} />
 
       {(job.status === 'queued' || job.status === 'running') && <JobProgress job={job} lost={lost} />}
 
@@ -337,8 +356,8 @@ function JobView({ id }: { id: string }) {
             ) : (
               <ErrorNotice title="No GLB to display" message="The job finished without a GLB file. Any other formats are listed under Downloads." />
             )}
-            {glb && <p className="font-mono text-xs text-ink-3">Generated file: {glb.name}</p>}
-            <SingleViewNote />
+            {glb && <p className="font-mono text-xs text-ink-3">{job.mesh_source === 'catalog' ? 'Catalog file' : 'Generated file'}: {glb.name}</p>}
+            <SourceNote source={job.mesh_source} label={identity?.label} />
             <Compare />
           </div>
           <div className="space-y-5">

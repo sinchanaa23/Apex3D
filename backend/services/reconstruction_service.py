@@ -22,6 +22,7 @@ from backend.database import (
     update_job_status,
     get_next_queued_job,
 )
+from backend.services.mesh_library import store_in_cache
 from backend.services.mesh_validator import export_mesh_package
 from backend.models import ReconstructionJobResponse
 
@@ -130,6 +131,10 @@ class ReconstructionManager:
             )
 
             assets, val_report = export_mesh_package(mesh, job_dir, job_id)
+
+            options = job.get("options") or {}
+            if options.get("mesh_source") == "reference" and options.get("class_id") is not None:
+                store_in_cache(int(options["class_id"]), job_dir)
 
             # Stage 5: Completed
             update_job_status(

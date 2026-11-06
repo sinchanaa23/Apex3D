@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { Check, ImagePlus, Plus, TriangleAlert } from 'lucide-react'
@@ -11,6 +11,16 @@ import { useResource } from '../lib/useResource'
 import { useSession } from '../state/session'
 
 type Group = Viewpoint | 'unsorted'
+
+/** The view that usually reconstructs best: a three-quarter or side view whose title matches the model. */
+const PREFERRED_VIEWS: Viewpoint[] = ['front_three_quarter', 'side', 'rear_three_quarter', 'front', 'rear']
+
+function bestReference(candidates: Reference[]): Reference | null {
+  const score = (reference: Reference) =>
+    (reference.match === 'confirmed' ? 100 : reference.match === 'approximate' ? 0 : 50) +
+    (reference.viewpoint ? PREFERRED_VIEWS.length - PREFERRED_VIEWS.indexOf(reference.viewpoint) : 0) * 10
+  return [...candidates].sort((a, b) => score(b) - score(a))[0] ?? null
+}
 
 const GROUPS: { key: Group; label: string }[] = [
   { key: 'front', label: 'Front' },
@@ -152,6 +162,17 @@ export default function References() {
   const [moved, setMoved] = useState<Record<string, Group>>({})
 
   const all = [...uploadedReferences, ...(retrieval.data?.candidates ?? [])]
+
+  // Once the car is matched, start from the clearest reference photo of that exact model rather than the user's photo.
+  // Done once per car, so choosing a different view or "Use my photo" afterwards sticks.
+  const autoPicked = useRef<number | null>(null)
+  useEffect(() => {
+    if (classId == null || retrieval.status !== 'ready' || autoPicked.current === classId) return
+    autoPicked.current = classId
+    if (input?.kind === 'reference') return
+    const best = bestReference(retrieval.data.candidates)
+    if (best) setInput({ kind: 'reference', reference: best })
+  }, [classId, retrieval.status, retrieval.data, input, setInput])
   const groupOf = (reference: Reference): Group => moved[reference.id] ?? reference.viewpoint ?? 'unsorted'
   const inputUrl = input?.kind === 'photo' ? photo?.url : (input?.reference.thumb_url ?? input?.reference.image_url)
 
@@ -200,7 +221,7 @@ export default function References() {
             <h2 className="font-medium">Reconstruction input</h2>
             <p className="text-sm text-ink-2">
               {input?.kind === 'photo' && 'Your uploaded photo.'}
-              {input?.kind === 'reference' && 'The reference marked below.'}
+              {input?.kind === 'reference' && 'A reference photo, marked below. The clearest one is picked for you, and you can choose another.'}
               {!input && 'Upload a reference, or upload a photo first.'}
             </p>
           </div>
