@@ -38,3 +38,6 @@ dist/
 *.npy
 *.npz
 *.parquet
+
+# The rule above is for datasets; this folder is source code
+!backend/data/
