@@ -14,6 +14,7 @@ Tested end to end against the real backend on 2026-11-06: recognition, classical
 | `queue_position: 0` while running | Treats 0 as "not waiting" |
 | Validation arrives inside the job, not only as a file | Reads it from the job. The file is still offered as a download |
 | `/api/references/upload` takes one file | Sends one request per file |
+| `/api/reconstruct` can fetch an `image_url` itself | The frontend never uses it. It downloads a reference in the browser and uploads the image as a file, so the server is not asked to fetch web addresses (Person A's integration note 8) |
 | Uploaded references have a relative `image_url` that the server can't fetch | Downloads the image in the browser and sends it as a file |
 | `/api/metrics` returns flat numbers | Shows each as a section. Missing or non-numeric values show "Not available" |
 
@@ -25,6 +26,10 @@ Tested end to end against the real backend on 2026-11-06: recognition, classical
 4. **Serve `.glb` without `Content-Disposition: attachment`** if possible. It works today, but inline is the safer default for a viewer.
 5. **Metrics shape.** The frontend can draw robustness curves, a confidence curve, the ablation table and failure cases if `metrics` also includes `{rows: [...]}` sections. The shapes are in `src/api/types.ts`. Today's flat numbers give single values only.
 6. **Start-up time.** The first recognition took about 12 s on CPU, mostly loading the detector. A warm-up call at start would help the 10 s target.
+
+## Saved result files as a fallback
+
+`getMetrics` asks `/api/metrics` first. For any section the backend has no data for, it uses Person A's saved files, which the build copies to `dist/results/` (`vite.config.ts`, `RESULT_FILES`). Only `classifier_metrics.json` and `optimization_metrics.json` are exposed. The backend's own numbers always win when both exist, and a section with no file behind it stays "Not available". `src/api/client.test.ts` covers these cases.
 
 ## Feeding `/api/metrics` with Person A's results
 

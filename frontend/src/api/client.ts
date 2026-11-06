@@ -11,7 +11,8 @@ import {
   type WireRecognition,
   type WireReference,
 } from './adapter'
-import type { Reference } from './types'
+import { normaliseImage } from '../lib/image'
+import type { MetricsResponse, Reference } from './types'
 
 export type ApiErrorKind = 'network' | 'timeout' | 'http' | 'parse' | 'aborted'
 
@@ -136,17 +137,14 @@ export type ReconstructInput = { image: Blob } | { reference: Reference }
 async function reconstructForm(input: ReconstructInput): Promise<FormData> {
   if ('image' in input) return fileForm(input.image, 'input.jpg')
 
-  const { image_url: url, id } = input.reference
-  if (url.startsWith('/')) {
-    // A user's upload is served by our own API, so the server can't fetch it by that relative path.
-    const response = await fetch(url).catch(() => null)
-    if (!response?.ok) throw new ApiError('network', "That reference couldn't be loaded. It may have been cleaned up, so upload it again.")
-    return fileForm(await response.blob(), 'input.jpg')
-  }
-  const form = new FormData()
-  form.append('image_url', url)
-  form.append('reference_id', id)
-  return form
+  // The browser fetches the reference and uploads the file itself, so the server never has to fetch a web address on our behalf.
+  const response = await fetch(input.reference.image_url).catch(() => null)
+  if (!response?.ok) throw new ApiError('network', "That reference image couldn't be loaded. Choose another, or upload your own.")
+  const blob = await response.blob()
+  const prepared = await normaliseImage(new File([blob], 'reference.jpg', { type: blob.type || 'image/jpeg' })).catch(() => null)
+  if (!prepared) throw new ApiError('parse', "That reference image couldn't be read. Choose another, or upload your own.")
+  URL.revokeObjectURL(prepared.url)
+  return fileForm(prepared.file, 'input.jpg')
 }
 
 export async function reconstruct(input: ReconstructInput, signal?: AbortSignal) {
@@ -162,7 +160,51 @@ export function assetUrl(assetId: string, file: string) {
   return `/api/assets/${encodeURIComponent(assetId)}/${encodeURIComponent(file)}`
 }
 
-export async function getMetrics(signal?: AbortSignal) {
-  const wire = await request<WireMetrics>('/api/metrics', {}, { signal })
-  return adapted(wire, adaptMetrics)
+/**
+ * Fetches a saved result file that was copied next to the app when it was built (see vite.config.ts).
+ * Returns null for anything that isn't JSON, because the server answers unknown paths with the app's own page.
+ */
+async function savedResult(name: string, signal?: AbortSignal): Promise<Record<string, unknown> | null> {
+  try {
+    const response = await fetch(`/results/${name}`, { signal })
+    if (!response.ok) return null
+    const parsed: unknown = JSON.parse(await response.text())
+    return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
+const hasSection = (metrics: MetricsResponse) => Object.entries(metrics).some(([key, value]) => key !== 'message' && value != null && value !== 'not available')
+
+/**
+ * The backend's /api/metrics is the first choice. Any section it has no data for is filled from the result files
+ * Person A saved under results/, so the Research Lab shows the trained model's real numbers even while the backend
+ * does not read that folder. Nothing is invented: a section with no file behind it stays "not available".
+ */
+export async function getMetrics(signal?: AbortSignal): Promise<MetricsResponse> {
+  let fromApi: MetricsResponse | null = null
+  let apiError: unknown = null
+  try {
+    fromApi = adapted(await request<WireMetrics>('/api/metrics', {}, { signal }), adaptMetrics)
+  } catch (error) {
+    if (error instanceof ApiError && error.kind === 'aborted') throw error
+    apiError = error
+  }
+
+  const [classifier, optimisation] = await Promise.all([savedResult('classifier_metrics.json', signal), savedResult('optimization_metrics.json', signal)])
+  if (!classifier && !optimisation) {
+    if (fromApi) return fromApi
+    throw apiError
+  }
+
+  const fromFiles = adapted(
+    { status: 'available', source_file: 'results/', metrics: { classifier_metrics: classifier, optimization_metrics: optimisation } } as WireMetrics,
+    adaptMetrics,
+  )
+  const merged: MetricsResponse = { ...fromFiles, message: fromApi?.message }
+  for (const [key, value] of Object.entries(fromApi ?? {})) {
+    if (key !== 'message' && value != null && value !== 'not available') (merged as Record<string, unknown>)[key] = value
+  }
+  return hasSection(merged) ? merged : (fromApi ?? merged)
 }
