@@ -1,12 +1,14 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import type { Group } from 'three'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CircleCheck, CircleMinus, Download, Library, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, CircleCheck, CircleMinus, Download, Library, TriangleAlert } from 'lucide-react'
 import { ApiError, assetUrl, getJob, reconstruct } from '../api/client'
 import type { Job, JobResult, ValidationReport } from '../api/types'
 import { Attribution } from '../components/Attribution'
 import MeshViewer from '../components/MeshViewer'
 import { colourFromImage, proportionsFor } from '../lib/adapt'
+import { exportCar, slug, type ExportFormat } from '../lib/exportCar'
 import { Card, EmptyState, ErrorNotice, PageHeader, PageLoading, Spinner, hudPrimary as primaryButton, hudSecondary as secondaryButton } from '../components/States'
 import { PhotoUpload } from '../components/PhotoUpload'
 import { rise, stagger } from '../components/hud/PageShell'
@@ -70,6 +72,27 @@ function StartPanel() {
   const inputUrl = input?.kind === 'photo' ? photo?.url : input?.reference.image_url
   const [paint, setPaint] = useState<string | null>(null)
   const proportions = proportionsFor(identity?.label)
+  const model = useRef<Group | null>(null)
+  const [modelReady, setModelReady] = useState(false)
+  const [saving, setSaving] = useState<ExportFormat | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const onModel = useCallback((group: Group | null) => {
+    model.current = group
+    setModelReady(group != null)
+  }, [])
+
+  async function download(format: ExportFormat) {
+    if (!model.current) return
+    setSaving(format)
+    setSaveError(null)
+    try {
+      await exportCar(model.current, format, slug(identity?.label))
+    } catch {
+      setSaveError("The file couldn't be written. Try again, or use another format.")
+    } finally {
+      setSaving(null)
+    }
+  }
 
   // The colour comes from the user's own photo, read in the browser. It is never sent anywhere.
   useEffect(() => {
@@ -106,7 +129,7 @@ function StartPanel() {
       <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-start">
         <div className="space-y-3">
           <Suspense fallback={<PageLoading label="Loading the 3D car" />}>
-            <ShowcaseViewer paint={paint} proportions={proportions} />
+            <ShowcaseViewer paint={paint} proportions={proportions} onModel={onModel} />
           </Suspense>
           <p className="flex gap-2 text-sm text-ink-2">
             <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -149,6 +172,24 @@ function StartPanel() {
                 to match the body style.
               </p>
             )}
+          </Card>
+
+          <Card title="Download this model">
+            <ul className="grid gap-2">
+              {(['glb', 'obj', 'stl'] as ExportFormat[]).map((format) => (
+                <li key={format}>
+                  <button type="button" disabled={!modelReady || saving != null} onClick={() => void download(format)} className={`${secondaryButton} w-full justify-between`}>
+                    <span className="inline-flex items-center gap-2">
+                      <Download aria-hidden className="size-4" />
+                      {format.toUpperCase()}
+                    </span>
+                    {saving === format && <span className="font-mono text-xs font-normal text-ink-3">Writing</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {saveError && <p className="mt-2 text-sm text-warning">{saveError}</p>}
+            <p className="mt-3 text-xs text-ink-3">The showcase car with your photo's colour and body proportions. It is a template model, not a scan of your car, so it has no real-world scale.</p>
           </Card>
 
           <Card title="Experimental: rebuild from a photo">
@@ -393,6 +434,10 @@ function JobView({ id }: { id: string }) {
 
   return (
     <div>
+      <Link to="/studio" className="mb-4 inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-ink">
+        <ArrowLeft aria-hidden className="size-4" />
+        Back to the showcase model
+      </Link>
       <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? (job.mesh_source === 'catalog' ? `Catalog model of ${identity.label}.` : `Experimental mesh of ${identity.label}.`) : undefined} />
 
       {(job.status === 'queued' || job.status === 'running') && <JobProgress job={job} lost={lost} />}

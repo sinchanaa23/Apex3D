@@ -75,7 +75,8 @@ interface Wheel {
   speed: number
 }
 
-function Car({ uniforms, paint, proportions, reducedMotion, onReady }: { uniforms: HoloUniforms; paint: string | null; proportions: Proportions; reducedMotion: boolean; onReady(): void }) {
+function Car({ uniforms, paint, proportions, reducedMotion, onReady, onModel }: { uniforms: HoloUniforms; paint: string | null; proportions: Proportions; reducedMotion: boolean; onReady(): void; onModel?(group: Group | null): void }) {
+  const outer = useRef<Group>(null)
   const { scene } = useGLTF(MODEL_URL, false, false) as unknown as { scene: Group }
   const materials = useMaterials(uniforms, paint)
   const edgeMaterial = useMemo(() => createEdgeMaterial(uniforms), [uniforms])
@@ -141,9 +142,15 @@ function Car({ uniforms, paint, proportions, reducedMotion, onReady }: { uniform
     onReady()
   }, [onReady])
 
+  // Hands the car to the page so it can be downloaded exactly as shown.
+  useEffect(() => {
+    onModel?.(outer.current)
+    return () => onModel?.(null)
+  }, [onModel, built])
+
   // Scaled about the floor, so a taller car grows upwards from the same ground.
   return (
-    <group scale={[proportions.width, proportions.height, proportions.length]}>
+    <group ref={outer} scale={[proportions.width, proportions.height, proportions.length]}>
       <group position={built.offset}>
         <primitive object={built.root} />
       </group>
@@ -162,7 +169,7 @@ function Floor({ uniforms }: { uniforms: HoloUniforms }) {
 }
 
 /** A designed car in the landing page's style, adapted to the user's photo. Not a reconstruction of their car. */
-export default function ShowcaseViewer({ paint, proportions }: { paint: string | null; proportions: Proportions }) {
+export default function ShowcaseViewer({ paint, proportions, onModel }: { paint: string | null; proportions: Proportions; onModel?(group: Group | null): void }) {
   const controls = useRef<OrbitControlsImpl>(null)
   const reducedMotion = useReducedMotion() ?? false
   const uniforms = useMemo(createHoloUniforms, [])
@@ -216,7 +223,7 @@ export default function ShowcaseViewer({ paint, proportions }: { paint: string |
           <Floor uniforms={uniforms} />
           <ContactShadows position={[0, 0.01, 0]} opacity={0.85} scale={9} blur={2.6} far={1.7} resolution={256} frames={reducedMotion ? 3 : Infinity} color="#000000" />
           <Suspense fallback={null}>
-            <Car uniforms={uniforms} paint={usePhotoColour ? paint : null} proportions={proportions} reducedMotion={reducedMotion} onReady={onReady} />
+            <Car uniforms={uniforms} paint={usePhotoColour ? paint : null} proportions={proportions} reducedMotion={reducedMotion} onReady={onReady} onModel={onModel} />
           </Suspense>
           <OrbitControls
             ref={controls}
