@@ -1,0 +1,128 @@
+[
+  {
+    "date": "2026-11-06 13:34:59",
+    "image": "00001.jpg",
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "gpu_vram_gib": 4.0,
+    "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "torch": "2.11.0+cu128",
+    "wall_seconds_incl_first_load": 23.57,
+    "device": "cuda:0",
+    "timings_s": {
+      "preprocess": 5.239,
+      "model_load": 8.681,
+      "inference": 1.252,
+      "mesh_extraction": 8.244,
+      "total": 23.571
+    },
+    "settings": {
+      "device": "auto",
+      "chunk_size": 2048,
+      "mc_resolution": 256,
+      "mc_threshold": 25.0,
+      "foreground_ratio": 0.85,
+      "remove_background": true,
+      "vertex_colors": true,
+      "cpu_fallback_on_oom": true,
+      "peak_vram_gib": 2.324
+    },
+    "isosurface_backend": "scikit-image shim",
+    "vertices": 40234,
+    "faces": 80456,
+    "has_vertex_colors": true,
+    "notes": [
+      "Single-view reconstruction: unseen sides are inferred.",
+      "Scale is unknown."
+    ],
+    "watertight": true,
+    "file_mb": {
+      "glb": 1.61,
+      "obj": 4.34,
+      "stl": 4.02
+    }
+  },
+  {
+    "date": "2026-11-06 13:35:10",
+    "image": "00010.jpg",
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "gpu_vram_gib": 4.0,
+    "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "torch": "2.11.0+cu128",
+    "wall_seconds_incl_first_load": 10.21,
+    "device": "cuda:0",
+    "timings_s": {
+      "preprocess": 1.121,
+      "model_load": 0.0,
+      "inference": 1.377,
+      "mesh_extraction": 7.705,
+      "total": 10.212
+    },
+    "settings": {
+      "device": "auto",
+      "chunk_size": 2048,
+      "mc_resolution": 256,
+      "mc_threshold": 25.0,
+      "foreground_ratio": 0.85,
+      "remove_background": true,
+      "vertex_colors": true,
+      "cpu_fallback_on_oom": true,
+      "peak_vram_gib": 2.324
+    },
+    "isosurface_backend": "scikit-image shim",
+    "vertices": 42378,
+    "faces": 84748,
+    "has_vertex_colors": true,
+    "notes": [
+      "Single-view reconstruction: unseen sides are inferred.",
+      "Scale is unknown."
+    ],
+    "watertight": true,
+    "file_mb": {
+      "glb": 1.7,
+      "obj": 4.58,
+      "stl": 4.24
+    }
+  },
+  {
+    "date": "2026-11-06 13:35:21",
+    "image": "00100.jpg",
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "gpu_vram_gib": 4.0,
+    "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "torch": "2.11.0+cu128",
+    "wall_seconds_incl_first_load": 10.14,
+    "device": "cuda:0",
+    "timings_s": {
+      "preprocess": 1.043,
+      "model_load": 0.0,
+      "inference": 1.379,
+      "mesh_extraction": 7.707,
+      "total": 10.137
+    },
+    "settings": {
+      "device": "auto",
+      "chunk_size": 2048,
+      "mc_resolution": 256,
+      "mc_threshold": 25.0,
+      "foreground_ratio": 0.85,
+      "remove_background": true,
+      "vertex_colors": true,
+      "cpu_fallback_on_oom": true,
+      "peak_vram_gib": 2.324
+    },
+    "isosurface_backend": "scikit-image shim",
+    "vertices": 42323,
+    "faces": 84636,
+    "has_vertex_colors": true,
+    "notes": [
+      "Single-view reconstruction: unseen sides are inferred.",
+      "Scale is unknown."
+    ],
+    "watertight": false,
+    "file_mb": {
+      "glb": 1.69,
+      "obj": 4.56,
+      "stl": 4.23
+    }
+  }
+]

@@ -1,0 +1,112 @@
+{
+  "generated_by": "notebooks/01_classifier_training.ipynb",
+  "generated_at": "2026-11-06 16:43:34",
+  "environment": {
+    "python": "3.12.4",
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "timm": "1.0.31",
+    "sklearn": "1.9.1",
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "gpu_vram_gib": 4.0,
+    "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "os": "Windows-11-10.0.26300-SP0"
+  },
+  "dataset": {
+    "name": "Stanford Cars",
+    "source": "kaggle:rickyyyyyyy/torchvision-stanford-cars",
+    "classes": 196,
+    "train": 6922,
+    "val": 1222,
+    "test": 8041,
+    "input": "ground-truth box crop + 8% margin",
+    "test_label_check": {
+      "labels_in_range": true,
+      "classes_present": 196,
+      "train_test_count_corr": 0.9934,
+      "degenerate_boxes": 0,
+      "val_minus_test_top1": 0.0002
+    }
+  },
+  "model": {
+    "arch": "convnext_tiny.fb_in22k_ft_in1k",
+    "img_size": 224,
+    "pretrained": "ImageNet-22k -> ImageNet-1k (timm)",
+    "params_m": 27.970852,
+    "checkpoint_mb": 111.949663
+  },
+  "training": {
+    "head_epochs": 2,
+    "max_ft_epochs": 30,
+    "epochs_run": 32,
+    "best_epoch": 28,
+    "batch": 32,
+    "effective_batch": 64,
+    "grad_checkpointing": false,
+    "lr_head": 0.001,
+    "lr_ft": 0.0003,
+    "layer_decay": 0.9,
+    "weight_decay": 0.05,
+    "label_smoothing": 0.1,
+    "augmentation": "RandomResizedCrop(0.6-1), HFlip, RandAugment(2,9), RandomErasing(0.25)",
+    "amp": "fp16",
+    "stage1_min": 1.2296363870302836,
+    "stage2_min": 183.2930384516716
+  },
+  "validation": {
+    "top1": 0.9222586154937744,
+    "top5": 0.9885433912277222,
+    "n": 1222
+  },
+  "calibration": {
+    "temperature": 0.6166166067123413,
+    "val_nll_before": 0.5920963883399963,
+    "val_nll_after": 0.3650914430618286,
+    "val_ece_before": 0.20754308401806312,
+    "val_ece_after": 0.033980429754857266
+  },
+  "thresholds": {
+    "confident_p1": 0.52,
+    "confident_margin": 0.34,
+    "reject_below_p1": 0.52,
+    "val_confident_coverage": 0.9337152209492635,
+    "val_confident_accuracy": 0.9500438212094654,
+    "reject_rule_note": "chosen on validation"
+  },
+  "test": {
+    "top1": 0.9220246076583862,
+    "top5": 0.984205961227417,
+    "n": 8041,
+    "nll_calibrated": 0.36681392788887024,
+    "ece_calibrated": 0.024038807013141684,
+    "make_top1": 0.9715209551050864,
+    "errors_same_make_model_diff_year": 0.06220095693779904,
+    "errors_same_make": 0.6347687400318979,
+    "states": {
+      "confident": {
+        "share": 0.9352070637980351,
+        "accuracy": 0.9503989361702128
+      },
+      "ambiguous": {
+        "share": 0.012684989429175475,
+        "accuracy": 0.5980392156862745
+      },
+      "rejected": {
+        "share": 0.05210794677278945,
+        "accuracy": 0.4916467780429594
+      }
+    },
+    "macro_precision": 0.923731213170824,
+    "macro_recall": 0.921285808532418,
+    "macro_f1": 0.9207652635132609
+  },
+  "speed_ms": {
+    "cpu_threads": 12,
+    "gpu_fp32_ms": 5.240605999715626,
+    "gpu_fp16_ms": 5.9430200001224875,
+    "cpu_fp32_ms": 56.28878999850713
+  },
+  "reload_check_agreement": 1.0,
+  "notebook_runtime_min": 187.84621467987697
+}

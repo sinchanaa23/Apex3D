@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Large files: dataset, weights, generated meshes (share through the team drive)
+data/
+checkpoints/
+artifacts/
+outputs/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.glb
+*.obj
+*.stl
+*.fbx
+
+# Third-party clones (set up with scripts/setup_triposr.ps1)
+third_party/
+
+# Local tooling
+cloudflared.exe
+*.log
+.env
+tools/
