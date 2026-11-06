@@ -129,6 +129,7 @@ Performs vehicle detection using R-CNN, crops the primary vehicle, feeds it to t
 - `400 Bad Request`: Unsupported file type (e.g. PDF or text).
 - `413 Payload Too Large`: File exceeds 20 MB.
 - `422 Unprocessable Entity`: Corrupt image that cannot be decoded.
+- `503 Service Unavailable`: No trained model is loaded (`checkpoints/model_quantized.onnx` is missing) or it failed to run. The `detail` says which. The server never returns invented predictions.
 
 ---
 
@@ -145,7 +146,19 @@ Computes traditional computer vision pipeline transforms and feature descriptors
   - `bbox_x2`: `float` (Optional)
   - `bbox_y2`: `float` (Optional)
 
-### Response `200 OK`
+> **Current response (changed by Person D during integration).** The server now returns Person B's pipeline from `backend/classical_cv/api.py`, which is already in the format the frontend uses. The example below is the earlier format and is only returned if Person B's pipeline fails. The frontend accepts both.
+>
+> ```json
+> {
+>   "steps": [{ "key": "clahe", "title": "CLAHE", "image": "data:image/jpeg;base64,...", "caption": "Contrast equalised on the LAB lightness channel." }],
+>   "features": { "aspect_ratio": 1.8, "hu_moments": [0.2, 0.01], "mean_brightness": 112.5, "low_light": "no", "hsv_histogram": [0.1], "feature_vector_length": 8136 },
+>   "timings_ms": { "total": 314 }
+> }
+> ```
+>
+> The ten stage keys are `original`, `clahe`, `edges`, `contours_roi`, `roi_crop`, `hsv_hue`, `hsv_saturation`, `hsv_value`, `lbp` and `hog`.
+
+### Response `200 OK` (earlier format)
 ```json
 {
   "success": true,
@@ -271,19 +284,12 @@ Submits an image to the background 3D reconstruction queue. Single-view inferenc
   - `remove_background`: `boolean` (Default `true`)
   - `mc_resolution`: `int` (Default `256`)
 
-### Request (Option B: JSON with Reference URL)
-- **Content-Type:** `application/json`
-```json
-{
-  "image_url": "https://upload.wikimedia.org/...",
-  "reference_id": "wm_9482104",
-  "options": {
-    "model": "triposr",
-    "remove_background": true,
-    "mc_resolution": 256
-  }
-}
-```
+### Request fields added during integration
+- `class_id`: `int` (Optional) — the car the user confirmed. If `catalog/<class_id>.glb` exists, or a mesh was already built from a reference photo of that car, the job comes back already `completed` and no GPU time is used.
+- `source`: `"photo"` (default) or `"reference"` — whether the image is the user's own photo or a reference photo of the matched car. Meshes built from a `reference` are cached per `class_id`.
+
+### Removed: reference URLs
+`image_url` is no longer accepted. The server does not fetch web addresses (Person A's integration note 8). The frontend downloads a reference in the browser and uploads it as `file`. Sending `image_url` alone returns `400`.
 
 ### Response `202 Accepted`
 ```json
@@ -301,6 +307,8 @@ Submits an image to the background 3D reconstruction queue. Single-view inferenc
 ## 6. Job Status & Logs: `GET /api/jobs/{id}`
 
 Returns the real-time state of the 3D generation worker.
+
+> **Job fields added during integration:** `mesh_source` (`"catalog"`, `"reference"` or `"photo"`: what the mesh was made from), `class_id` and `class_name` (the matched car, when the job was started with one).
 
 ### Response `200 OK` (While Running)
 ```json

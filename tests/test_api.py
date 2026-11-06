@@ -11,6 +11,8 @@ from PIL import Image, ImageDraw
 import numpy as np
 
 from backend.main import app
+from backend.services.classifier_service import VehicleClassifier
+from backend.services.reconstruction_service import ReconstructionManager
 from backend.data.stanford_cars_classes import STANFORD_CARS_CLASSES
 
 client = TestClient(app)
@@ -63,6 +65,20 @@ def test_metrics_endpoint():
         assert "not finished" in data["message"].lower() or "not been generated" in data["message"].lower()
 
 
+MODEL_LOADED = VehicleClassifier.get_instance().model_type != "none"
+
+
+def test_recognize_without_a_model_is_an_error_not_invented_results(monkeypatch):
+    """With no trained model the API must say so, never return made-up predictions."""
+    classifier = VehicleClassifier.get_instance()
+    monkeypatch.setattr(classifier, "model_type", "none")
+    files = {"file": ("test_car.jpg", create_sample_car_image(), "image/jpeg")}
+    response = client.post("/api/recognize", files=files)
+    assert response.status_code == 503
+    assert "model_quantized.onnx" in response.json()["detail"]
+
+
+@pytest.mark.skipif(not MODEL_LOADED, reason="needs checkpoints/model_quantized.onnx (Person A's handover zip)")
 def test_recognize_endpoint_success():
     """Verify POST /api/recognize with sample car photo."""
     img_bytes = create_sample_car_image()
@@ -112,32 +128,19 @@ def test_classical_cv_endpoint():
     assert response.status_code == 200
     data = response.json()
 
-    assert data["success"] is True
-    # Verify image stages
-    stages = data["intermediate_images"]
-    for required in ["original", "clahe", "edges", "contours", "largest_contour_roi", "hog_visualization"]:
-        assert required in stages
-        assert stages[required].startswith("data:image/png;base64,")
+    # Person B's pipeline: ten stages, each an image, then the features and timing.
+    keys = [step["key"] for step in data["steps"]]
+    assert keys == ["original", "clahe", "edges", "contours_roi", "roi_crop", "hsv_hue", "hsv_saturation", "hsv_value", "lbp", "hog"]
+    for step in data["steps"]:
+        assert step["title"] and step["caption"]
+        assert step["image"].startswith("data:image/")
 
-    # Verify features
     features = data["features"]
-    assert "geometric" in features
-    assert "aspect_ratio" in features["geometric"]
-    assert "extent" in features["geometric"]
-    assert "solidity" in features["geometric"]
-    assert "hu_moments" in features["geometric"]
-    assert len(features["geometric"]["hu_moments"]) == 7
+    for name in ["aspect_ratio", "extent", "solidity", "mean_brightness", "low_light", "feature_vector_length"]:
+        assert name in features
+    assert len(features["hu_moments"]) == 7
+    assert len(features["hsv_histogram"]) > 0
 
-    assert "hog" in features
-    assert features["hog"]["vector_length"] > 0
-
-    assert "lbp" in features
-    assert len(features["lbp"]["histogram"]) > 0
-
-    assert "color_hsv" in features
-    assert "hue_histogram" in features["color_hsv"]
-
-    assert "timings_ms" in data
     assert data["timings_ms"]["total"] > 0
 
 
@@ -175,8 +178,43 @@ def test_manual_reference_upload():
     assert res["candidate"]["source"] == "manual_upload"
 
 
-def test_reconstruction_workflow():
+def _stub_mesh(self, image, options):
+    """Stands in for TripoSR in tests only, so the queue, validation and export run in seconds."""
+    import trimesh
+
+    return trimesh.creation.icosphere(subdivisions=2)
+
+
+def test_image_url_is_not_fetched_by_the_server():
+    """The server must not fetch web addresses on a client's behalf."""
+    response = client.post("/api/reconstruct", data={"image_url": "http://127.0.0.1:1/internal"})
+    assert response.status_code == 400
+    assert "does not fetch" in response.json()["detail"]
+
+
+def test_reconstruction_failure_is_reported_not_replaced(monkeypatch):
+    """If TripoSR fails the job fails with its message. No invented car is returned."""
+
+    def boom(self, image, options):
+        raise RuntimeError("3D reconstruction failed: test failure")
+
+    monkeypatch.setattr(ReconstructionManager, "_run_reconstruction", boom)
+    files = {"file": ("car.jpg", create_sample_car_image(250, 180), "image/jpeg")}
+    job_id = client.post("/api/reconstruct", files=files).json()["job_id"]
+    info = {}
+    for _ in range(20):
+        info = client.get(f"/api/jobs/{job_id}").json()
+        if info["status"] in ("completed", "failed"):
+            break
+        time.sleep(0.5)
+    assert info["status"] == "failed"
+    assert "test failure" in info["error"]
+    assert info["assets"] is None
+
+
+def test_reconstruction_workflow(monkeypatch):
     """Verify complete 3D reconstruction lifecycle: submit -> poll -> download assets."""
+    monkeypatch.setattr(ReconstructionManager, "_run_reconstruction", _stub_mesh)
     img_bytes = create_sample_car_image(250, 180)
     files = {"file": ("car_3d_input.jpg", img_bytes, "image/jpeg")}
     submit_resp = client.post("/api/reconstruct", files=files)

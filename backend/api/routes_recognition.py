@@ -12,7 +12,7 @@ from PIL import Image
 from backend.config import MAX_UPLOAD_SIZE, ALLOWED_MIME_TYPES
 from backend.models import RecognitionResponse
 from backend.services.detector_service import VehicleDetector, get_crop
-from backend.services.classifier_service import VehicleClassifier
+from backend.services.classifier_service import ClassifierUnavailable, VehicleClassifier
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["Recognition"])
@@ -67,7 +67,10 @@ async def recognize_vehicle(
 
     # 6. Run Fine-Grained Classification
     classifier = VehicleClassifier.get_instance()
-    predictions, conf_state, conf_score, margin, cls_time_ms, message = classifier.classify(crop_img)
+    try:
+        predictions, conf_state, conf_score, margin, cls_time_ms, message = classifier.classify(crop_img)
+    except ClassifierUnavailable as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
 
     # If no car was detected, update message and crop_used
     if not car_detected:

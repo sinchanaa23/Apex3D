@@ -32,6 +32,10 @@ from backend.models import VehiclePrediction
 logger = logging.getLogger(__name__)
 
 
+class ClassifierUnavailable(RuntimeError):
+    """Raised when there is no trained model to answer with. The API reports it as a 503 with this message."""
+
+
 class VehicleClassifier:
     _instance = None
 
@@ -39,7 +43,7 @@ class VehicleClassifier:
         self.device = DEVICE
         self.model = None
         self.onnx_session = None
-        self.model_type = "feature_heuristic"
+        self.model_type = "none"
         self.model_path = None
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -101,11 +105,11 @@ class VehicleClassifier:
                     except Exception as e:
                         logger.warning("Failed loading PyTorch model from %s: %s", p, e)
 
-        logger.info(
-            "No trained checkpoint found in checkpoints/ or notebooks/. "
-            "Using calibrated image-feature recognition fallback (Stanford Cars 196)."
+        logger.warning(
+            "No trained checkpoint found in checkpoints/ or notebooks/. Recognition will return an error "
+            "until checkpoints/model_quantized.onnx is in place."
         )
-        self.model_type = "feature_heuristic"
+        self.model_type = "none"
         self.model_path = None
 
     def classify(
@@ -128,6 +132,7 @@ class VehicleClassifier:
                 return self._process_probabilities(probs, start_time)
             except Exception as e:
                 logger.error("Error executing PyTorch model: %s", e)
+                raise ClassifierUnavailable(f"The classifier failed while running: {e}") from e
 
         # Check if ONNX session is active
         if self.model_type == "onnx" and self.onnx_session is not None:
@@ -140,9 +145,12 @@ class VehicleClassifier:
                 return self._process_probabilities(probs, start_time)
             except Exception as e:
                 logger.error("Error executing ONNX model: %s", e)
+                raise ClassifierUnavailable(f"The classifier failed while running: {e}") from e
 
-        # Feature-based heuristic fallback
-        return self._feature_based_classify(crop_image, start_time)
+        raise ClassifierUnavailable(
+            "No trained classifier is loaded. Put model_quantized.onnx in the checkpoints/ folder "
+            "(from Person A's handover zip) and restart the server."
+        )
 
     def _process_probabilities(
         self, probs: np.ndarray, start_time: float
@@ -184,59 +192,3 @@ class VehicleClassifier:
 
         elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
         return predictions, confidence_state, top1_prob, margin, elapsed_ms, message
-
-    def _feature_based_classify(
-        self, crop_image: Image.Image, start_time: float
-    ) -> Tuple[List[VehiclePrediction], str, float, float, float, str]:
-        """
-        Calibrated feature-based vehicle classifier.
-        Produces realistic Top-5 distributions and respects vehicle proportions
-        and color signatures across the 196 Stanford Cars classes.
-        """
-        import hashlib
-        import cv2
-
-        np_img = np.array(crop_image.convert("RGB"))
-        w, h = crop_image.size
-        aspect_ratio = float(w) / max(1, h)
-
-        # Compute image perceptual fingerprint
-        small = cv2.resize(np_img, (32, 32))
-        hsv = cv2.cvtColor(small, cv2.COLOR_RGB2HSV)
-        avg_hue = int(np.mean(hsv[:, :, 0]))
-        avg_sat = int(np.mean(hsv[:, :, 1]))
-        img_bytes = small.tobytes()
-        hash_val = int(hashlib.md5(img_bytes).hexdigest()[:8], 16)
-
-        # Filter suitable classes by aspect ratio
-        is_suv_truck = aspect_ratio < 1.45
-        is_sports_coupe = aspect_ratio > 1.75
-
-        matching_indices = []
-        for idx, name in enumerate(STANFORD_CARS_CLASSES):
-            info = get_class_info(idx)
-            if not info:
-                continue
-            body = info["body_style"]
-            if is_suv_truck and body in ["SUV", "Extended Cab", "Crew Cab", "Regular Cab", "Van", "Minivan"]:
-                matching_indices.append(idx)
-            elif is_sports_coupe and body in ["Coupe", "Convertible", "Sedan"]:
-                matching_indices.append(idx)
-            else:
-                matching_indices.append(idx)
-
-        # Pick candidate indices deterministically from image features
-        rng = np.random.RandomState(hash_val % 100000)
-        chosen_indices = rng.choice(matching_indices, size=5, replace=False)
-
-        # Generate realistic calibrated probabilities
-        raw_scores = rng.dirichlet(np.array([12.0, 3.0, 1.5, 0.8, 0.5]))
-        raw_scores = np.sort(raw_scores)[::-1]
-
-        # Construct full 196-class probability distribution
-        full_probs = np.zeros(len(STANFORD_CARS_CLASSES), dtype=np.float32)
-        for idx, score in zip(chosen_indices, raw_scores):
-            full_probs[idx] = score
-
-        return self._process_probabilities(full_probs, start_time)
-

@@ -10,7 +10,6 @@ import uuid
 import logging
 from pathlib import Path
 from typing import Optional
-import requests
 from fastapi import APIRouter, UploadFile, File, Form, Body, HTTPException, status
 from fastapi.responses import FileResponse
 from PIL import Image
@@ -58,11 +57,11 @@ def _enqueued(job: dict) -> dict:
     "/reconstruct",
     status_code=status.HTTP_202_ACCEPTED,
     summary="Enqueue 3D Mesh Reconstruction Job",
-    description="Submits an image (uploaded file or reference URL) to the background TripoSR queue. Respects single GPU laptop queue.",
+    description="Submits an uploaded image to the background TripoSR queue. Respects single GPU laptop queue. Web addresses are not fetched by the server.",
 )
 async def create_reconstruction_job(
     file: Optional[UploadFile] = File(None, description="Optional image upload"),
-    image_url: Optional[str] = Form(None, description="Optional image URL if file not provided"),
+    image_url: Optional[str] = Form(None, description="Not supported. Kept only so old clients get a clear error."),
     remove_background: bool = Form(True),
     mc_resolution: int = Form(256),
     class_id: Optional[int] = Form(None, description="Confirmed Stanford Cars class, if the user matched one"),
@@ -92,27 +91,10 @@ async def create_reconstruction_job(
         with open(target_path, "wb") as f:
             f.write(contents)
 
-    # Handle image URL
-    elif image_url:
-        try:
-            resp = requests.get(image_url, timeout=10)
-            if resp.status_code != 200:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Failed to fetch image from URL. HTTP {resp.status_code}",
-                )
-            target_path = UPLOADS_DIR / f"{upload_id}.jpg"
-            with open(target_path, "wb") as f:
-                f.write(resp.content)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Could not download image from provided URL: {e}",
-            )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either a 'file' upload or an 'image_url' must be supplied.",
+            detail="Upload the image as a 'file'. The server does not fetch web addresses.",
         )
 
     # Options
