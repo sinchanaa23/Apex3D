@@ -24,32 +24,33 @@ wheels/
 *.egg
 
 # Jupyter Notebook checkpoints
-.ipynb_checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints
 
 # Environment variables & secrets
 .env
 .env.*
 !.env.example
 
-# Large ML files, checkpoints & weights (Rule: Keep dataset and weights out of git)
+# Large files: dataset, weights, checkpoints (share through team drive)
+data/
+datasets/
+data/stanford_cars/
+checkpoints/
+weights/
+artifacts/
+outputs/
 *.pt
 *.pth
+*.ckpt
 *.onnx
 *.bin
 *.safetensors
-*.ckpt
-weights/
-checkpoints/
-data/stanford_cars/
-datasets/
 
-# 3D assets & exports (Rule: Keep generated meshes out of git)
-.ipynb_checkpoints/
+# Source code exception for backend data
+!backend/data/
 
-# Large files: dataset, weights, generated meshes (share through the team drive)
-data/
-artifacts/
-outputs/
+# 3D assets & exports (generated meshes)
 *.glb
 *.obj
 *.stl
@@ -67,6 +68,21 @@ frontend/node_modules/
 frontend/dist/
 frontend/.next/
 frontend/out/
+node_modules/
+
+# Third-party clones & local tooling
+third_party/
+cloudflared.exe
+*.log
+tools/
+
+# Evaluation caches
+.claude/
+.pytest_cache/
+*.joblib
+*.npy
+*.npz
+*.parquet
 
 # OS specific
 .DS_Store
@@ -80,25 +96,3 @@ desktop.ini
 .idea/
 *.sublime-project
 *.sublime-workspace
-
-
-# Third-party clones (set up with scripts/setup_triposr.ps1)
-third_party/
-
-# Local tooling
-cloudflared.exe
-*.log
-tools/
-
-# Person B evaluation caches and local tooling
-.claude/
-.pytest_cache/
-node_modules/
-dist/
-*.joblib
-*.npy
-*.npz
-*.parquet
-
-# The rule above is for datasets; this folder is source code
-!backend/data/
