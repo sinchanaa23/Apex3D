@@ -53,22 +53,23 @@ Two of the three meshes were watertight. Watertightness is not guaranteed, so Pe
 ### Interface for Person C
 
 ```python
-from backend.reconstruction import reconstruct, ReconstructionError, ReconstructionSettings, release_gpu
+from backend.reconstruction import reconstruct, reconstruct_detailed, ReconstructionError, release_gpu
 
 try:
-    result = reconstruct(image_path_or_pil)           # blocking: call from the job worker
+    mesh = reconstruct(pil_image)      # Person C's contract: returns trimesh.Trimesh. Blocking: call from the job worker
 except ReconstructionError as e:
-    job.fail(str(e))                                   # message is safe to show the user
+    job.fail(str(e))                   # the message is safe to show the user; never swap in a stand-in mesh
 
-result.mesh                 # trimesh.Trimesh, Y-up (glTF/Three.js), unitless, centred near the origin
-result.mesh.export("mesh.glb")   # also .obj, .stl
-result.processed_image      # the exact background-removed image fed to TripoSR (show it in the UI)
-result.summary()            # JSON-safe: device, timings_s, settings, peak VRAM, vertex/face counts, notes
+mesh                                   # Y-up (glTF/Three.js), unitless, centred near the origin
+mesh.metadata["apex3d"]                # JSON-safe: device, timings_s, settings, peak VRAM, counts, notes
+mesh.export("mesh.glb")                # also .obj, .stl
+
+result = reconstruct_detailed(pil_image)   # same, plus result.processed_image (the background-removed input)
 ```
 
 - Only one reconstruction runs at a time (internal lock). Queue jobs in front of it.
 - The model stays loaded on the GPU after the first call (peak use while generating is 2.3 GB). Call `release_gpu()` before anything else needs the GPU.
-- If CUDA runs out of memory, the job is retried on the CPU, and `summary()["notes"]` says so.
+- If CUDA runs out of memory, the job is retried on the CPU, and `mesh.metadata["apex3d"]["notes"]` says so.
 - `notes` always includes "Single-view reconstruction: unseen sides are inferred." and "Scale is unknown." The UI must show both.
 
 ## 4. Classifier — `notebooks/01_classifier_training.ipynb`
@@ -133,7 +134,7 @@ To run it in the app: create an `onnxruntime.InferenceSession` with `intra_op_nu
 | To | What | Where |
 |---|---|---|
 | B, C | Checkpoint bundle: weights, architecture, input size, normalisation, class names, temperature, thresholds | `checkpoints/apex3d_convnext_tiny.pt` (team drive). Load with `notebooks/cls_lib.load_classifier` and predict with `cls_lib.predict_crop` |
-| C | Optimised CPU classifier (deployed variant, §5) | `checkpoints/apex3d_convnext_tiny_int8_static_matmul.onnx` (team drive) |
+| C | App classifier: the deployed INT8 variant with the temperature built in, so it auto-loads (§5) | `checkpoints/model_quantized.onnx` (team drive); made by `scripts/export_app_classifier.py`, checked in `results/app_classifier_export.json` |
 | B, C | Class list with parsed make / model / year | `results/class_names.json` |
 | B | Exact train/val split used for every model | `results/split.json` |
 | B | Logits and 768-d embeddings for train/val/test | `artifacts/logits_*.npz`, `artifacts/embeddings_*.npz` (team drive) |
@@ -147,7 +148,13 @@ To run it in the app: create an `onnxruntime.InferenceSession` with `intra_op_nu
 
 1. Plug the laptop in. In Windows Settings → System → Power, set screen and sleep to **Never** while plugged in, and set closing the lid to "Do nothing". I have not changed these settings; you change them yourself.
 2. Close Docker Desktop, the WSL VM and other heavy apps. They hold about 5 GB of memory, and Windows DataLoader workers previously failed with "paging file is too small" (error 1455).
-3. Start the server (Person C's one-command startup), then run `scripts\run_tunnel.ps1 -Port <port>`. It prints the public `trycloudflare.com` URL.
+3. Start the server: `python start_server.py --no-reload` (Person C), with `APEX3D_REJECTED_THRESHOLD=0.52` and `APEX3D_MARGIN_THRESHOLD=0.34` set. Then run `scripts\run_tunnel.ps1 -Port 8000`, which prints the public `trycloudflare.com` URL.
 4. The URL changes every time the tunnel restarts, so update the stable link page whenever it does.
 
-The tunnel has **not been tested yet**. It needs `cloudflared` installed and a running server.
+**Status:**
+- **Local full-stack test passed.** `main`, `backend-c` and `person-a` were merged in a local, unpushed branch. In that test, `/api/recognize` used `model_quantized.onnx` and predicted the right class ID for 5/5 test photos. `/api/reconstruct` returned a real TripoSR mesh in 42 s from a cold start. Person C must still fix the issues in `docs/INTEGRATION_NOTES_A_TO_C.md` (most urgently the class-name list).
+- **The public tunnel is still untested.** `cloudflared` is not installed yet. Install it with `winget install --id Cloudflare.cloudflared` (this may ask for admin approval).
+
+## 9. Team-drive package
+
+`scripts\package_handover.ps1` builds `outputs\apex3d_person_a_handover.zip` (169 MB). It holds `model_quantized.onnx`, the PyTorch bundle, the embeddings and logits for Person B, and the sample meshes for Person D. Unzip it at the repo root.
