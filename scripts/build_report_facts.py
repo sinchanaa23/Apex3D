@@ -30,6 +30,7 @@ FACTS = REPORT_DIR / "FACTS_SHEET.md"
 
 USNS = "1RUA24CSE0461, 1RUA24CSE0467, 1RUA24CSE0445, 1RUA24CSE0453"
 REPO_URL = "https://github.com/sinchanaa23/Apex3D"
+LIVE_URL = "https://apex3d-xvuc.onrender.com"
 TEAM_NAME = "NoharaFam"
 MEMBERS = [
     ("Sinchana R Kambar", "1RUA24CSE0461"),
@@ -195,7 +196,7 @@ def skeleton() -> str:
 | **Team Name** | {TEAM_NAME} |
 | **Team Members** | {"; ".join(f"{n} ({u})" for n, u in MEMBERS)} |
 | **GitHub Repository** | {REPO_URL} , commit evaluated: <!-- AUTO:commit -->`x`<!-- /AUTO --> |
-| **Live Demo / Deployment** | [TODO: live URL. Nothing is deployed yet] |
+| **Live Demo / Deployment** | {LIVE_URL} (Render, free plan) |
 
 ---
 
@@ -371,7 +372,7 @@ def facts_sheet() -> str:
            "A reference to write from. It holds measured numbers with their source files, repository modules and the figures that exist. It contains no explanation on purpose: the explanations in the report should be the team's own words (the hackathon caps AI-written content at 30%). Regenerate with `python scripts/build_report_facts.py`.", ""]
 
     out += ["## Header", "", f"- Problem: P5, {TITLE}", f"- Team ID: T25. USNs: {USNS}", f"- Repository: {REPO_URL}", f"- Commit to quote (HEAD when this was generated): `{git('rev-parse', 'HEAD')}`. Push everything and regenerate right before submitting so the hash is the final one.",
-            "- Live URL: **none yet**. The report template has a field for it and the rubric requires one.", ""]
+            "- Live URL: {LIVE_URL} (Render free plan: accounts reset when it restarts, it sleeps after about 15 minutes idle, and the mesh builder is off). Checked from outside: /api/health answers with detector onnx and mesh_builder false, protected routes answer 401, /docs is hidden. Sign-up and recognition on the live site were not tested by the tool that wrote this.".format(LIVE_URL=LIVE_URL), ""]
 
     if classifier:
         d, m, t = classifier["dataset"], classifier["model"], classifier["training"]
@@ -421,7 +422,6 @@ def facts_sheet() -> str:
             "- **Not yet verified from a clean clone.** The template's checklist says the metrics must be reproducible from the repository. Run the commands on a fresh clone before submitting.", ""]
 
     out += ["## Only the team can supply", "",
-                "- The live URL (none exists yet).",
             "- The AI-assistance declaration and your honest estimate of the AI share of the report.",
             "- Each member's own part, for the viva.", "",
             "## Building the PDF", "",

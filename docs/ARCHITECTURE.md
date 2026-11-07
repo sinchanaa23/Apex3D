@@ -1,6 +1,6 @@
 # Apex3D architecture
 
-**Status: describes the code as built** (checked against `backend/`, `frontend/src/` and `Dockerfile` at the commit shown in the report). The app runs locally and has a Docker image; it is **not deployed to a public URL yet**. Numbers quoted here come from `results/` and `eval_P5_T25.md`.
+**Status: describes the code as built** (checked against `backend/`, `frontend/src/` and `Dockerfile` at the commit shown in the report). The app runs locally and has a Docker image; it is deployed on Render's free plan at https://apex3d-xvuc.onrender.com. Numbers quoted here come from `results/` and `eval_P5_T25.md`.
 
 ## System
 
@@ -143,8 +143,8 @@ sequenceDiagram
 
 | Piece | State |
 |---|---|
-| `Dockerfile` | Builds the frontend and the server in one image, with TripoSR and all weights baked in |
-| `render.yaml` | Render Blueprint, set to the free plan, which is too small for the mesh builder (see `docs/DEPLOY_RENDER.md`) |
+| `Dockerfile` | The lean image Render builds: the frontend and a server without PyTorch (the detector is exported to ONNX during the build). `deploy/Dockerfile.full` adds TripoSR |
+| `render.yaml` | Render Blueprint on the free plan. The server needs about 260 MB, so it fits; the mesh builder does not (see `docs/DEPLOY_RENDER.md`) |
 | `deploy/huggingface/` | Hugging Face Space version. Docker Spaces need a paid subscription (see `docs/DEPLOY_HUGGINGFACE.md`) |
 | Laptop and tunnel | `scripts/run_tunnel.ps1` exposes the local server through a Cloudflare quick tunnel |
-| Public URL | **None yet** |
+| Public URL | https://apex3d-xvuc.onrender.com (Render free plan: no disk, so accounts reset on restart; sleeps when idle; no mesh builder) |

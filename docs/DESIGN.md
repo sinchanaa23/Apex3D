@@ -80,7 +80,7 @@ Every figure below is measured in `results/` and reported in `eval_P5_T25.md`.
 
 - One server, one mesh built at a time, and the rate limits on logins are kept in memory, so they reset when the server restarts.
 - There is no password reset and no email verification, so anyone can sign up with any email address.
-- It has not been load-tested, and it has not been tested on a real phone, on iOS Safari (including HEIC photos), or on a public URL. **There is no public URL yet.** Deployment files exist for Render and Hugging Face, but neither free option can run the whole app (see `docs/DEPLOY_RENDER.md` and `docs/DEPLOY_HUGGINGFACE.md`).
+- It has not been load-tested, and it has not been tested on a real phone, on iOS Safari (including HEIC photos), or at any size beyond the free plan's single small CPU. The app is live at https://apex3d-xvuc.onrender.com on Render's free plan, which has no disk (accounts reset when it restarts), sleeps when idle and cannot run the mesh builder, so **Build experimental mesh is off online** and the page says so. Hugging Face needs a paid subscription for Docker Spaces (see `docs/DEPLOY_RENDER.md` and `docs/DEPLOY_HUGGINGFACE.md`).
 
 ## Ethics
 
@@ -132,11 +132,12 @@ Dark and minimal, as the brief asks. Near-black surfaces, with one orange accent
 
 - **Automated:** the frontend has 71 tests and the backend 130, covering the API, the login and its protections, the model wrapper, the evaluation tools, the retention task and the report tools. Seven further tests need a teammate's local detector files and were not run here.
 - **By hand:** the full flow (sign up, upload, identity, references, 3D Studio, Research Lab) was driven in a desktop browser against the real model and the real API, including a real TripoSR mesh build, and the failure states (bad files, server errors, a failed job, malformed metrics files, no vehicle found) were injected on the earlier test responses.
-- **Not yet tested:** a real phone, iOS Safari and HEIC photos, many users at once, and any public URL or hosting platform (the Docker image has not been built).
+- **Not yet tested:** a real phone, iOS Safari and HEIC photos, many users at once, and the live site under real load. Only the outside of the live site was checked (health, access rules); sign-up and recognition on it were not yet tested.
 
 ## Still to do
 
-- [ ] A public URL (the rubric requires one)
+- [x] A public URL: https://apex3d-xvuc.onrender.com
+- [ ] Test sign-up, recognition and the Studio on the live site, from a phone
 - [ ] Run the quickstart on a clean clone and fix anything it finds
 - [ ] Test on real phones and send the bug list to the team
 - [ ] Record the backup demo video (the screen recording is in `docs/demo/demo.mp4`; check it still matches the app)

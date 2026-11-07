@@ -1,6 +1,6 @@
 # Deploying Apex3D on Render (free plan)
 
-The repository has what Render needs: `render.yaml` (the Blueprint), `Dockerfile` (the lean image) and `deploy/Dockerfile.full` (the same plus the TripoSR mesh builder, for a paid plan with 2 GB or more). **Nothing here has been run on Render yet, and the Docker image was never built** (Docker Desktop wasn't running). What was tested is the same code, with PyTorch and trimesh blocked so that the lean server's needs are real: it starts, answers, and gives the same results.
+The repository has what Render needs: `render.yaml` (the Blueprint), `Dockerfile` (the lean image) and `deploy/Dockerfile.full` (the same plus the TripoSR mesh builder, for a paid plan with 2 GB or more). **It is deployed at https://apex3d-xvuc.onrender.com.** The Docker image was built by Render, not locally (Docker Desktop wasn't running here). What was tested is the same code, with PyTorch and trimesh blocked so that the lean server's needs are real: it starts, answers, and gives the same results.
 
 ## Start it on Render
 

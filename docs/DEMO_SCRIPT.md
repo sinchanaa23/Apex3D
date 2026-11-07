@@ -1,5 +1,7 @@
 # Apex3D demo script
 
+Live address: **https://apex3d-xvuc.onrender.com** (Render free plan: open it a few minutes before presenting, because it sleeps when idle and the first visit takes about a minute; sign up on it again if accounts were reset; Build experimental mesh is off there, so show the showcase car, or run the app locally for meshes).
+
 **Three minutes. Draft:** the backend doesn't exist yet, so rehearse and time this once the real flow works. Items in `[brackets]` must be filled in from real results.
 
 ## Before judging

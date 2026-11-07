@@ -6,8 +6,8 @@
 | **Problem Title** | Intelligent Fine-Grained Vehicle Recognition and Analysis System |
 | **Team Name** | NoharaFam |
 | **Team Members** | Sinchana R Kambar (1RUA24CSE0461); Sohini Dutta (1RUA24CSE0467); Shreyas Muniraju Kolar (1RUA24CSE0445); Shubanck Prasoon Guptha (1RUA24CSE0453) |
-| **GitHub Repository** | https://github.com/sinchanaa23/Apex3D , commit evaluated: <!-- AUTO:commit -->`2f5279c`<!-- /AUTO --> |
-| **Live Demo / Deployment** | [TODO: live URL. Nothing is deployed yet] |
+| **GitHub Repository** | https://github.com/sinchanaa23/Apex3D , commit evaluated: <!-- AUTO:commit -->`d29635c`<!-- /AUTO --> |
+| **Live Demo / Deployment** | https://apex3d-xvuc.onrender.com (Render, free plan) |
 
 ---
 
