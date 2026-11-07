@@ -62,12 +62,16 @@ class VehicleDetector:
                 if ORT_THREADS:
                     options.intra_op_num_threads = ORT_THREADS
                     options.inter_op_num_threads = 1
-                self.session = ort.InferenceSession(str(onnx_path), options, providers=["CPUExecutionProvider"])
+                session = ort.InferenceSession(str(onnx_path), options, providers=["CPUExecutionProvider"])
+                # A broken export must not be used quietly. Run it once on two sizes now: if it can't, say so and don't use it.
+                for height, width in ((240, 320), (480, 640)):
+                    session.run(None, {"image": np.zeros((3, height, width), dtype=np.float32)})
+                self.session = session
                 self.backend, self.is_ready = "onnx", True
                 logger.info("Faster R-CNN detector loaded from %s (ONNX Runtime, no PyTorch needed)", onnx_path)
                 return
             except Exception as e:  # noqa: BLE001
-                logger.warning("Could not load the ONNX detector %s: %s. Trying torchvision.", onnx_path, e)
+                logger.error("The ONNX detector %s does not work (%s). Trying torchvision.", onnx_path, e)
 
         try:
             import torch

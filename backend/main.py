@@ -144,6 +144,7 @@ async def health_check():
         device=DEVICE,
         queue_size=queue_count,
         mesh_builder=mesh_builder_available(),
+        detector=VehicleDetector.get_instance().backend,
     )
 
 

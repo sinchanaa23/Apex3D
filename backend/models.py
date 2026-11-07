@@ -214,4 +214,5 @@ class HealthResponse(BaseModel):
     device: str = "cpu"
     queue_size: int = 0
     mesh_builder: bool = True  # False when TripoSR isn't installed on this server
+    detector: str = "unknown"  # "onnx", "torch" or "none" (the weak OpenCV fallback: something is wrong)
 

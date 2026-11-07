@@ -29,6 +29,7 @@ def test_the_server_starts_and_answers_with_pytorch_and_trimesh_unavailable():
         buffer = io.BytesIO(); image.save(buffer, "JPEG")
         with TestClient(main.app) as client:
             health = client.get("/api/health").json()
+            assert health["detector"] in ("onnx", "none"), health  # torch is blocked here, so never "torch"
             response = client.post("/api/recognize", files={"file": ("car.jpg", buffer.getvalue(), "image/jpeg")})
             assert response.status_code == 200, response.text
             body = response.json()

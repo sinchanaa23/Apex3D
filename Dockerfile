@@ -19,9 +19,11 @@ RUN npm run build
 # --- 2. Export the detector to ONNX (PyTorch is used here only, and is thrown away) -----------------------------------
 FROM python:3.11-slim AS detector
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
-RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install onnx onnxscript
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install onnx onnxscript onnxruntime pillow numpy
 WORKDIR /build
 COPY scripts/export_detector_onnx.py scripts/
+# Real photos to trace the detector with and to check it against PyTorch. The build fails if the exported file disagrees.
+COPY results/figures/classifier_failures/ results/figures/classifier_failures/
 RUN python scripts/export_detector_onnx.py
 
 # --- 3. The server ---------------------------------------------------------------------------------------------------

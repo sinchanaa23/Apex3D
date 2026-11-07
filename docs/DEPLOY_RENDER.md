@@ -15,6 +15,13 @@ The repository has what Render needs: `render.yaml` (the Blueprint), `Dockerfile
 
 To redeploy after a change: merge it to `main`, then on the service click **Manual Deploy > Deploy latest commit**. Pushes don't deploy by themselves.
 
+## If the build fails
+
+- **Check which commit Render built.** The Blueprint page shows it. Pushes don't deploy by themselves, so after a fix go to the service and click **Manual Deploy > Deploy latest commit** (or re-sync the Blueprint).
+- **Send me the last 40 lines of the build log** (service > Logs, set to build logs). "Exited with status 1" alone doesn't say which step failed.
+- Problems found and fixed while preparing this, which a build would have hit: `.dockerignore` hid the `scripts/` folder that the detector-export stage copies; and a detector exported by tracing random noise produced a file that failed on real photos in a clean environment. The export script now traces with a real photo and checks the result against PyTorch on every sample photo at two sizes, and the build stops if they disagree. The server also tests the detector file once at start-up, and `/api/health` reports `detector: onnx` when it is working (`none` means the weak OpenCV fallback is in use: something is wrong).
+- Verified by simulating the Docker stages in brand-new environments (not by a Docker build): the export stage (PyTorch, ONNX tools and ONNX Runtime) produced a working detector file, and a server built from `requirements-serve.txt` alone, with no PyTorch installed, passed every check: 213 MB after start-up, about 395 MB at its highest, 4 of 4 recognitions correct.
+
 ## What was measured
 
 | | Before (PyTorch detector) | Now (ONNX detector, no PyTorch) |
