@@ -28,6 +28,12 @@ The headline, the two ways in (Identify a car, See the evaluation) and the 3D ca
 
 A red Audi R8. The detector box (95%) and the classifier's answer are drawn on the photo. The right side shows the confidence ring (100%, margin 99.9%, state Confident), the Manufacturer, Model and Year as separate fields, and buttons to confirm the match or reject it. Timings: detection 1.97 s, classification 280 ms, total 2.25 s.
 
+### Identity: top 5 predictions
+
+![Identity: top 5 predictions](docs/screenshots/10-identity-top5.png)
+
+A second Audi R8 photo, a harder case. The model answers Audi R8 Coupe 2012 at 53.2% with a 39.3% lead over the runner-up, just above the app's 0.52 confidence threshold. The Top 5 list shows what it considered: two Lamborghini coupes (13.9% and 10.9%), then two sedans (7.7% and 0.8%). The detector found the car with 99% confidence. Timings: detection 2.21 s, classification 357 ms, total 2.57 s.
+
 ### References
 
 ![References](docs/screenshots/03-references.png)
@@ -69,6 +75,12 @@ The three approaches on the same split, with Top-1, Top-5, inference time and si
 ![Research Lab: ablation study](docs/screenshots/09-lab-ablation.png)
 
 Each row removes or swaps one component of the pipeline and shows the Top-1 and the change against the baseline.
+
+### Research Lab: failure cases
+
+![Research Lab: failure cases](docs/screenshots/11-lab-failure-cases.png)
+
+Research Lab, failure cases. Three detector failures with the photo, the box each method chose, and the cause: a tiny background car outranks the main Ford Mustang (top-score box IoU 0.00), a large low-confidence box beats the right box on an Aston Martin V8 Vantage (chosen box IoU 0.28), and a very close FIAT 500 seen from behind is missed in favour of a sliver of another car (IoU 0.03).
 
 The evaluation report [`eval_P5_T25.md`](eval_P5_T25.md) uses the same screenshots next to the numbers they show.
 

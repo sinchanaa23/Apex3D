@@ -227,6 +227,10 @@ Classical rows compare against all classical features, optimisation rows against
 
 ### Detector and classical-ROI failures
 
+![Research Lab, failure cases](docs/screenshots/11-lab-failure-cases.png)
+
+*Research Lab, failure cases. Three detector failures with the photo, the box each method chose, and the cause: a tiny background car outranks the main Ford Mustang (top-score box IoU 0.00), a large low-confidence box beats the right box on an Aston Martin V8 Vantage (chosen box IoU 0.28), and a very close FIAT 500 seen from behind is missed in favour of a sliver of another car (IoU 0.03).*
+
 | Case | Result | Cause |
 |---|---|---|
 | A tiny background car outranks the main car | Top-score box IoU 0.00, at score 1.00 (true: Ford Mustang Convertible 2007) | The detector scores small distant cars as highly as the main subject, so choosing the top score selected a background car. This hit 68 of 500 sampled test images, and the app would have identified the wrong car. Fixed: the app now crops the largest box scoring at least 0.5, chosen on validation. This image rises to IoU 0.95, and IoU failures fall to 4 of 500. |
@@ -263,6 +267,10 @@ Screenshots of the running app. A screen recording of the same flow is in `docs/
 ![Identity page for a red Audi R8](docs/screenshots/02-identity.png)
 
 *Identity page for a red Audi R8. The detector box (95%) and the classifier's answer sit on the photo. The right side gives the confidence ring (100%, margin 99.9%, state Confident), the Manufacturer, Model and Year as separate fields, and buttons to confirm or reject. Timings: detection 1.97 s, classification 280 ms, total 2.25 s.*
+
+![A second Audi R8 photo, a harder case](docs/screenshots/10-identity-top5.png)
+
+*A second Audi R8 photo, a harder case. The model answers Audi R8 Coupe 2012 at 53.2% with a 39.3% lead over the runner-up, just above the app's 0.52 confidence threshold. The Top 5 list shows what it considered: two Lamborghini coupes (13.9% and 10.9%), then two sedans (7.7% and 0.8%). The detector found the car with 99% confidence. Timings: detection 2.21 s, classification 357 ms, total 2.57 s.*
 
 ![Reference Studio](docs/screenshots/03-references.png)
 
