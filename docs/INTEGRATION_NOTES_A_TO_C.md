@@ -1,5 +1,19 @@
 # Integration notes: Person A → Person C
 
+> **Status 2026-11-07, re-checked on `main` (`918d627`):**
+> - **Fixed:** items 1–5, 7 and 8.
+>   - The class list now comes from `results/class_names.json`, and 8 of 8 test photos show the correct name.
+>   - There are no fake fallbacks.
+>   - The rembg step was removed.
+>   - Thresholds are 0.52/0.34, and metrics are served.
+>   - Crop margin is 0.08, and the `image_url` fetch was removed.
+> - **Still open (minor):**
+>   - Item 6: the app's own ONNX session in `classifier_service.py` doesn't set `intra_op_num_threads`, so classification takes about 32 ms instead of about 20 ms.
+>   - The app resizes bilinearly while training used bicubic (about 0.1–0.2 points; see `eval_P5_T25.md`).
+>   - New: 4 tests in `tests/test_api.py` fail on a fresh clone. Use `with TestClient(app) as client:` so startup creates the database.
+>
+> The original findings below are kept for the record.
+
 Tested 2026-11-06 on the GPU laptop. I merged `origin/main` (frontend), `origin/backend-c` and `person-a` into a **local, unpushed** branch, ran `python start_server.py`, and sent real requests. Everything below was observed, not guessed.
 
 ## Works
