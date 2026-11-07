@@ -29,7 +29,7 @@
     "image_id": "images/test/02234.jpg",
     "predicted": "Chosen box IoU 0.59, score 1.00",
     "actual": "Spyker C8 Coupe 2009",
-    "explanation": "COCO training images rarely show scissor doors, so the box covers only the body, while the annotation includes the raised doors. The Ford GT example behaves the same way. Effect on classification is unmeasured until detector-crop accuracy is run. The car's body stays in the crop, so the harm may be small. Retraining the detector on Stanford boxes could address it."
+    "explanation": "COCO training images rarely show scissor doors, so the box covers only the body, while the annotation includes the raised doors. The Ford GT example behaves the same way. The car's body stays in the crop, and detector crops overall didn't measurably lower accuracy on the test sample (see results/detector_crop_accuracy.json), but this specific case wasn't measured separately. Retraining the detector on Stanford boxes could address it."
   },
   {
     "title": "The classical ROI locks onto the background",

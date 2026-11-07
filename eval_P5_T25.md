@@ -19,6 +19,38 @@ Deep make-level Top-1 is 97.15%. Of the deep model's errors, 63.48% are within t
 
 Deep features alone with the same linear head: 92.18% Top-1. Change from adding classical features: -0.09 percentage points.
 
+### The full pipeline: classifying detector crops
+
+The rows above use annotated boxes, which a real photo doesn't have. Here the deployed classifier receives the crop the app would use, on the same images each time.
+
+| Detector | Annotated box Top-1 | Detector crop Top-1 (95% margin) | Detector crop Top-5 | Top-1 with the old top-score rule | Test images |
+|---|---|---|---|---|---|
+| MobileNetV3 (used by the app) | 91.80% | 92.40% ± 2.3 | 99.20% | 80.60% | random sample of 500 |
+| ResNet-50 | 91.80% | 91.80% ± 2.4 | 98.80% | 79.60% | random sample of 500 |
+
+An image with no box scoring at least 0.5 is classified on its full frame, as in the app. On this sample, detector crops did not measurably lower accuracy compared with annotated boxes. Choosing the wrong detected car did.
+
+### Backbone comparison
+
+Trained with the same split, crops, augmentation and schedule. Validation chose the model; test is shown for reporting.
+
+| Backbone | Parameters | Validation Top-1 | Test Top-1 | Test Top-5 | Test macro F1 | CPU time per image |
+|---|---|---|---|---|---|---|
+| convnext_tiny.fb_in22k_ft_in1k | 28.0 M | 92.23% | 92.20% | 98.42% | 92.08% | 56 ms |
+| resnet50.a1_in1k | 23.9 M | 83.55% | 81.58% | 95.70% | 81.49% | 54 ms |
+| tf_efficientnetv2_s.in21k_ft_in1k | 20.4 M | 86.50% | 87.13% | 96.97% | 87.01% | 64 ms |
+
+### Why two Top-1 figures appear for the deployed model
+
+Person A's notebook scored the deployed model at 92.18%, and the app's own preprocessing scores 92.02%, 13 images apart. Rerunning the same model file independently reproduced the 642 errors behind the 92.02% figure, image for image. Resize method and JPEG caching change roughly 100 individual predictions but move Top-1 by under 0.2 points, and none of the variants here reproduces 92.18%. Person A's images came from a different mirror of the dataset, which may account for the rest, but this wasn't verified. Treat the deployed model's annotated-box Top-1 as about 92.0-92.2%. The app wasn't changed, because a gain of a few images isn't significant, and the deployed results in this report describe its current preprocessing.
+
+| Preprocessing | Test Top-1 | Test Top-5 | Wrong images |
+|---|---|---|---|
+| Bilinear resize, as the app does | 92.02% | 98.40% | 642 |
+| Bicubic resize, as in training | 92.10% | 98.50% | 635 |
+| Bicubic, through a cached JPEG crop like the training notebook | 92.03% | 98.51% | 641 |
+| Published by notebook 01b, on Person A's data copy | 92.18% | 98.51% | 629 |
+
 ## 2. Object localisation (IoU)
 
 | Method | Mean IoU | Median IoU | IoU ≥ 0.5 | IoU ≥ 0.75 | Images |
@@ -155,6 +187,10 @@ Adaptive CLAHE changed classical validation Top-1 by -0.33 percentage points, on
 | Classical: hog features only | Validation | 14.40% | -2.37 |
 | Classical: geometry features only | Validation | 1.47% | -15.30 |
 | Detector: top score instead of largest confident (500 images, mean IoU) | Test | 0.811 | -0.120 IoU |
+| Full pipeline: top-score rule instead of largest confident (500 images) | Test | 80.60% | -11.80 |
+| Full pipeline: annotated box instead of detector crop (500 images) | Test | 91.80% | -0.60 |
+| Backbone: resnet50.a1_in1k instead of ConvNeXt-Tiny | Test | 81.58% | -10.62 |
+| Backbone: tf_efficientnetv2_s.in21k_ft_in1k instead of ConvNeXt-Tiny | Test | 87.13% | -5.07 |
 | Deep: onnx_int8_dynamic instead of ONNX FP32 | Test | 91.98% | -0.22 |
 | Deep: onnx_int8_static_all instead of ONNX FP32 | Test | 86.11% | -6.09 |
 | Deep: onnx_int8_static_matmul instead of ONNX FP32 | Test | 92.18% | -0.02 |
@@ -166,7 +202,7 @@ Adaptive CLAHE changed classical validation Top-1 by -0.33 percentage points, on
 | Hybrid: deep_plus_hog | Validation | 92.06% | -0.16 |
 | Hybrid: deep_plus_geometry | Validation | 92.23% | +0.00 |
 
-Classical rows compare against all classical features, optimisation rows against ONNX FP32, crop rows against the annotated box, and hybrid rows against deep features alone.
+Classical rows compare against all classical features, optimisation rows against ONNX FP32, no-crop against the annotated box, full-pipeline rows against the app's detector crop, backbone rows against ConvNeXt-Tiny, and hybrid rows against deep features alone.
 
 ## Failure cases
 
@@ -177,7 +213,7 @@ Classical rows compare against all classical features, optimisation rows against
 | A tiny background car outranks the main car | Top-score box IoU 0.00, at score 1.00 (true: Ford Mustang Convertible 2007) | The detector scores small distant cars as highly as the main subject, so choosing the top score selected a background car. This hit 68 of 500 sampled test images, and the app would have identified the wrong car. Fixed: the app now crops the largest box scoring at least 0.5, chosen on validation. This image rises to IoU 0.95, and IoU failures fall to 4 of 500. |
 | The fix itself fails on a weak, large box | Chosen box IoU 0.28, score 0.56. Top-score box IoU 0.90 (true: Aston Martin V8 Vantage Coupe 2012) | A large low-confidence box covering dark studio background just passes the 0.5 score limit and beats the correct box. Preferring large boxes has this cost. Possible improvement: test a higher score limit or score multiplied by area on validation. Score times area was close on validation, so it's the first candidate. |
 | A very close car is missed in favour of a partial one | Chosen box IoU 0.03, score 1.00 (true: FIAT 500 Convertible 2012) | The main car fills the frame and shows its rear with a folded roof, a less common view, so no confident box covers it. The largest confident box is a sliver of another car at the edge. Possible improvement: ignore boxes cut off by the image edge when a central vehicle exists, or fall back to the full frame when the chosen box is narrow. |
-| Raised doors fall outside the detector's box | Chosen box IoU 0.59, score 1.00 (true: Spyker C8 Coupe 2009) | COCO training images rarely show scissor doors, so the box covers only the body, while the annotation includes the raised doors. The Ford GT example behaves the same way. Effect on classification is unmeasured until detector-crop accuracy is run. The car's body stays in the crop, so the harm may be small. Retraining the detector on Stanford boxes could address it. |
+| Raised doors fall outside the detector's box | Chosen box IoU 0.59, score 1.00 (true: Spyker C8 Coupe 2009) | COCO training images rarely show scissor doors, so the box covers only the body, while the annotation includes the raised doors. The Ford GT example behaves the same way. The car's body stays in the crop, and detector crops overall didn't measurably lower accuracy on the test sample (see results/detector_crop_accuracy.json), but this specific case wasn't measured separately. Retraining the detector on Stanford boxes could address it. |
 | The classical ROI locks onto the background | Contour ROI IoU 0.00. Detector IoU 0.95 (true: BMW ActiveHybrid 5 Sedan 2012) | The largest-contour method assumes the car has the strongest outline. Here the bridge does, so the ROI misses the car completely. It has no idea what a car is. This is why the app crops with the detector. The contour ROI stays as a visual explanation in the classical view, and isn't used for classification. |
 
 ### Classifier failures (deployed model, real test set)

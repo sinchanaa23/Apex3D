@@ -44,8 +44,8 @@ def classifier_section() -> dict | str:
     metrics = load("classifier_metrics")
     if not metrics:
         return NOT_AVAILABLE
-    ablation = load("ablation_inference") or {}
-    crop = ablation.get("detector_crop", {}).get("with_detector_crop", {})
+    # The detector the app runs. These figures come from a sample, as the Research Lab's source file records.
+    crop = ((load("detector_crop_accuracy") or {}).get("runs", {}).get("mobilenet") or {}).get("detector_crop", {})
     return section("classifier_metrics.json", {
         "model": metrics["model"]["arch"],
         "top1": metrics["test"]["top1"],
@@ -129,9 +129,10 @@ def ablation_section() -> dict | str:
     if ablation:
         baseline = ablation["with_annotated_box_crop"]["top1"]
         rows = [{"removed": "Vehicle crop (classifies the full image)", "top1": ablation["without_any_crop_full_image"]["top1"], "note": "Deep model, test split"}]
-        if "detector_crop" in ablation:
-            crop = ablation["detector_crop"]
-            rows.append({"removed": "Annotated box (uses the detector's box)", "top1": crop["with_detector_crop"]["top1"], "note": f"{crop['images']} test images"})
+        run = ((load("detector_crop_accuracy") or {}).get("runs") or {}).get("mobilenet")
+        if run:
+            rows.append({"removed": "Annotated box (uses the app's detector crop)", "top1": run["detector_crop"]["top1"], "note": f"{run['images']} test images; annotated box scored {run['annotated_box']['top1'] * 100:.1f}% on these"})
+            rows.append({"removed": "Largest-box rule (uses the detector's top score)", "top1": run["top_score_rule"]["top1"], "note": f"{run['images']} test images"})
         if hybrid:
             rows.append({"removed": "Classical features from the best fusion", "top1": hybrid["test"]["deep_only"]["top1"], "note": "Linear head, test split"})
         return section("ablation_inference.json", {"baseline_top1": baseline, "rows": rows})
