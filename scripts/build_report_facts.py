@@ -30,6 +30,13 @@ FACTS = REPORT_DIR / "FACTS_SHEET.md"
 
 USNS = "1RUA24CSE0461, 1RUA24CSE0467, 1RUA24CSE0445, 1RUA24CSE0453"
 REPO_URL = "https://github.com/sinchanaa23/Apex3D"
+TEAM_NAME = "NoharaFam"
+MEMBERS = [
+    ("Sinchana R Kambar", "1RUA24CSE0461"),
+    ("Sohini Dutta", "1RUA24CSE0467"),
+    ("Shreyas Muniraju Kolar", "1RUA24CSE0445"),
+    ("Shubanck Prasoon Guptha", "1RUA24CSE0453"),
+]
 TITLE = "Intelligent Fine-Grained Vehicle Recognition and Analysis System"
 
 
@@ -185,8 +192,8 @@ def skeleton() -> str:
 | :--- | :--- |
 | **Problem ID** | P5 |
 | **Problem Title** | {TITLE} |
-| **Team Name** | [TODO: registered team name] |
-| **Team Members** | [TODO: full names] ({USNS}) |
+| **Team Name** | {TEAM_NAME} |
+| **Team Members** | {"; ".join(f"{n} ({u})" for n, u in MEMBERS)} |
 | **GitHub Repository** | {REPO_URL} , commit evaluated: <!-- AUTO:commit -->`x`<!-- /AUTO --> |
 | **Live Demo / Deployment** | [TODO: live URL. Nothing is deployed yet] |
 
@@ -414,8 +421,7 @@ def facts_sheet() -> str:
             "- **Not yet verified from a clean clone.** The template's checklist says the metrics must be reproducible from the repository. Run the commands on a fresh clone before submitting.", ""]
 
     out += ["## Only the team can supply", "",
-            "- Team name, and each member's full name.",
-            "- The live URL (none exists yet).",
+                "- The live URL (none exists yet).",
             "- The AI-assistance declaration and your honest estimate of the AI share of the report.",
             "- Each member's own part, for the viva.", "",
             "## Building the PDF", "",
