@@ -130,7 +130,7 @@ def test_saved_results_and_models_need_a_login_but_the_app_shell_does_not(client
     if not (FRONTEND_DIST_DIR / "index.html").exists():
         pytest.skip("frontend is not built")
     assert client.get("/results/classifier_metrics.json").status_code == 401
-    assert client.get("/models/car.glb").status_code == 401
+    assert client.get("/models/car.glb").status_code == 200  # the landing page is public and shows this car
     assert client.get("/login").status_code == 200  # the login page itself has to load
     assert client.get("/%2e%2e/%2e%2e/backend/auth.py").status_code != 200 or "scrypt" not in client.get("/%2e%2e/%2e%2e/backend/auth.py").text
     signup(client)

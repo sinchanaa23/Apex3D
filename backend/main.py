@@ -173,8 +173,8 @@ if FRONTEND_DIST_DIR.exists() and FRONTEND_DIST_DIR.is_dir():
         if full_path.startswith("api/") or full_path == "api" or full_path.startswith("docs") or full_path.startswith("openapi.json"):
             return JSONResponse(status_code=404, content={"detail": "API endpoint not found"})
         
-        # The saved result files and the 3D models are data, not app code, so they need a login like the API does.
-        if full_path.startswith(("results/", "models/")) and login_required() and session_user(request) is None:
+        # The saved result files are data, not app code, so they need a login like the API does. /models (the landing page's showcase car, CC BY) stays public.
+        if full_path.startswith("results/") and login_required() and session_user(request) is None:
             return JSONResponse(status_code=401, content={"detail": "Please log in to use this."})
 
         file_path = (FRONTEND_DIST_DIR / full_path).resolve()

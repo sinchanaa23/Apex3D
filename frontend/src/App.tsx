@@ -18,7 +18,7 @@ const Lab = lazy(() => import('./pages/Lab'))
 
 const shell = (page: ReactNode) => <PageShell>{page}</PageShell>
 
-/** Every page except the login and sign-up pages needs a login. */
+/** Every page except the landing page and the login and sign-up pages needs a login. */
 function RequireAuth({ children }: { children: ReactNode }) {
   const { loading, user, loginRequired } = useAuth()
   const location = useLocation()
@@ -35,14 +35,7 @@ export default function App() {
       <ErrorBoundary key={pathname} title="This page hit a problem">
         <Suspense fallback={<PageLoading label="Loading page" />}>
           <Routes>
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <Home />
-                </RequireAuth>
-              }
-            />
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={shell(<Auth mode="login" />)} />
             <Route path="/signup" element={shell(<Auth mode="signup" />)} />
             <Route path="/upload" element={guarded(<Upload />)} />
