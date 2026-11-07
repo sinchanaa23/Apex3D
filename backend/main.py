@@ -3,6 +3,7 @@ Apex3D Main FastAPI Application Entrypoint.
 Serves recognition, classical CV, reference retrieval, 3D reconstruction, and static frontend assets.
 """
 
+import asyncio
 import os
 import logging
 from contextlib import asynccontextmanager
@@ -40,6 +41,20 @@ logging.basicConfig(
 logger = logging.getLogger("apex3d")
 
 
+RETENTION_HOURS = float(os.getenv("APEX3D_RETENTION_HOURS", "2"))
+CLEANUP_EVERY_SECONDS = 15 * 60
+
+
+async def _cleanup_loop():
+    """Deletes users' uploaded photos and old results once they are older than RETENTION_HOURS. Runs now, then every 15 minutes."""
+    while True:
+        try:
+            await asyncio.to_thread(cleanup_old_storage, RETENTION_HOURS)
+        except Exception:  # noqa: BLE001
+            logger.exception("Scheduled storage cleanup failed")
+        await asyncio.sleep(CLEANUP_EVERY_SECONDS)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle startup and shutdown management."""
@@ -53,7 +68,10 @@ async def lifespan(app: FastAPI):
     VehicleClassifier.get_instance()
 
     logger.info("Apex3D Backend initialized on device: %s", DEVICE)
+    cleanup_task = asyncio.create_task(_cleanup_loop())
+    logger.info("Uploaded photos and results are deleted after %.1f hours.", RETENTION_HOURS)
     yield
+    cleanup_task.cancel()
     logger.info("Shutting down Apex3D Backend.")
 
 

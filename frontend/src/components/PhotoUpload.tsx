@@ -181,7 +181,7 @@ export function PhotoUpload({ onDone, className = '' }: { onDone?: () => void; c
       )}
 
       <p className="mt-4 text-xs text-ink-3">
-        Your photo goes to the team's host laptop for processing and is deleted afterwards. It stays in this tab's memory only, so reloading the page clears it. Photos may show people or number plates, so choose accordingly.
+        Your photo is sent to the server to identify the car and is not saved. If you build a 3D model from it, a copy is kept for up to 2 hours so the model can be built, then deleted. In your browser it stays in this tab's memory only, so reloading the page clears it. Photos may show people or number plates, so choose accordingly.
       </p>
     </div>
   )
