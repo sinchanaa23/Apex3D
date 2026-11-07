@@ -32,7 +32,7 @@ def export(path: Path) -> None:
         input_names=["image"], output_names=["boxes", "labels", "scores"],
         dynamic_axes={"image": {0: "c", 1: "h", 2: "w"}, "boxes": {0: "n"}, "labels": {0: "n"}, "scores": {0: "n"}},
     )
-    print(f"Wrote {path.relative_to(ROOT)} ({path.stat().st_size / 1e6:.0f} MB)")
+    print(f"Wrote {path} ({path.stat().st_size / 1e6:.0f} MB)")
 
 
 def main() -> None:
