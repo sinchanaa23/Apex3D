@@ -4,9 +4,12 @@ services:
     name: apex3d
     runtime: docker
     dockerfilePath: ./Dockerfile
-    # Measured on the real code: a 3D mesh build peaks at about 1.25 GB for the whole server, so 512 MB (starter) is not
-    # enough and 2 GB (standard) is. See docs/DEPLOY_RENDER.md. The free plan can't hold this app.
-    plan: standard
+    # FREE PLAN, chosen because a card isn't available. Limits (Render's, from memory): 512 MB of memory, a small share of one
+    # CPU, sleeps after about 15 minutes idle, and no persistent disk. Measured on the real code: the server needs about
+    # 330 to 580 MB with the models loaded and about 1.25 GB while building a 3D mesh, so on this plan the mesh builder will
+    # run out of memory and the service will restart, and recognition itself may too. Accounts are lost on every restart.
+    # For the full app use "standard" (2 GB) and restore the disk block below. See docs/DEPLOY_RENDER.md.
+    plan: free
     healthCheckPath: /api/health
     # A deploy happens when you press Deploy, not on every push, so a teammate's broken commit can't take the live site down.
     autoDeploy: false
@@ -15,10 +18,11 @@ services:
         value: "1"
       - key: APEX3D_DISABLE_DOCS
         value: "1"
-      # Standard has 1 CPU. Telling PyTorch avoids it starting more threads than the CPU can run.
+      # Telling PyTorch avoids it starting more threads than the CPU can run.
       - key: OMP_NUM_THREADS
         value: "1"
-    disk:
-      name: apex3d-data
-      mountPath: /app/backend/storage
-      sizeGB: 1
+    # Not allowed on the free plan. With "standard", add back:
+    #   disk:
+    #     name: apex3d-data
+    #     mountPath: /app/backend/storage
+    #     sizeGB: 1

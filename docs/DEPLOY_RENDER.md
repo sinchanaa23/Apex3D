@@ -1,5 +1,7 @@
 # Deploying Apex3D on Render
 
+> **Current state of `render.yaml`: free plan, no disk.** It was set that way because a payment card isn't available. On the free plan (512 MB of memory, Render's limit from memory) the app is **not expected to work fully**: the 3D mesh builder needs about 1.25 GB and will crash the service, identification may also run out of memory (the server uses 330 to 580 MB with its models loaded), the service sleeps after about 15 minutes idle, and every account is lost whenever it restarts. For the complete app on Render use `plan: standard` and restore the `disk` block (the commented lines in `render.yaml`). Everything below describes that full setup.
+
 The repository has what Render needs: `Dockerfile` (builds the React app and runs the FastAPI server and the TripoSR mesh builder in one container), `render.yaml` (the Blueprint) and `.dockerignore`. Nothing here has been run on Render yet, and the Docker build was not test-built locally (Docker Desktop was not running), so the first deploy is the real test.
 
 ## One-time setup
