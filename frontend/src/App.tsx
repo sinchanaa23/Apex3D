@@ -18,7 +18,7 @@ const Lab = lazy(() => import('./pages/Lab'))
 
 const shell = (page: ReactNode) => <PageShell>{page}</PageShell>
 
-/** Pages that run the models need a login. The landing page, the Research Lab and the account pages stay open. */
+/** Every page except the login and sign-up pages needs a login. */
 function RequireAuth({ children }: { children: ReactNode }) {
   const { loading, user, loginRequired } = useAuth()
   const location = useLocation()
@@ -35,7 +35,14 @@ export default function App() {
       <ErrorBoundary key={pathname} title="This page hit a problem">
         <Suspense fallback={<PageLoading label="Loading page" />}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <Home />
+                </RequireAuth>
+              }
+            />
             <Route path="/login" element={shell(<Auth mode="login" />)} />
             <Route path="/signup" element={shell(<Auth mode="signup" />)} />
             <Route path="/upload" element={guarded(<Upload />)} />
@@ -44,7 +51,7 @@ export default function App() {
             <Route path="/references" element={guarded(<References />)} />
             <Route path="/studio" element={guarded(<Studio />)} />
             <Route path="/studio/:jobId" element={guarded(<Studio />)} />
-            <Route path="/lab" element={shell(<Lab />)} />
+            <Route path="/lab" element={guarded(<Lab />)} />
             <Route
               path="*"
               element={<EmptyState title="Page not found" body="That address isn't part of Apex3D." action={{ to: '/', label: 'Go to home' }} />}

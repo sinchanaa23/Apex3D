@@ -94,7 +94,7 @@ def test_protected_routes_need_a_login(client):
     for method, path in [("post", "/api/recognize"), ("post", "/api/classical"), ("post", "/api/reconstruct"), ("get", "/api/references"), ("post", "/api/maintenance/cleanup")]:
         assert getattr(client, method)(path).status_code == 401, path
     assert client.get("/api/health").status_code == 200
-    assert client.get("/api/metrics").status_code != 401
+    assert client.get("/api/metrics").status_code == 401
     signup(client)
     # Logged in, the same routes get past the login check (and then complain about the missing upload).
     assert client.post("/api/recognize").status_code == 422
@@ -122,3 +122,17 @@ def test_another_website_cannot_read_responses_with_cookies(client):
     response = client.get("/api/auth/me", headers={"Origin": "https://evil.example"})
     assert response.headers.get("access-control-allow-origin") != "https://evil.example"
     assert response.headers.get("access-control-allow-origin") != "*"
+
+
+def test_saved_results_and_models_need_a_login_but_the_app_shell_does_not(client):
+    from backend.config import FRONTEND_DIST_DIR
+
+    if not (FRONTEND_DIST_DIR / "index.html").exists():
+        pytest.skip("frontend is not built")
+    assert client.get("/results/classifier_metrics.json").status_code == 401
+    assert client.get("/models/car.glb").status_code == 401
+    assert client.get("/login").status_code == 200  # the login page itself has to load
+    assert client.get("/%2e%2e/%2e%2e/backend/auth.py").status_code != 200 or "scrypt" not in client.get("/%2e%2e/%2e%2e/backend/auth.py").text
+    signup(client)
+    results = client.get("/results/classifier_metrics.json")
+    assert results.status_code in (200, 404)  # allowed through; 404 only if the file is missing from this build

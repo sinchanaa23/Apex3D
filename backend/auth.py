@@ -7,8 +7,8 @@ Sign up, log in and log out, with sessions kept on the server.
 - Wrong-password attempts are limited per email address, and sign-ups are limited overall.
 - Set APEX3D_REQUIRE_LOGIN=0 to switch the login requirement off (tests and local development only).
 
-Public routes: /api/health, /api/metrics and everything under /api/auth. The recognition, classical CV, reference,
-reconstruction and maintenance routes need a logged-in user.
+Public routes: /api/health and everything under /api/auth. Every other API route, the saved result files (/results)
+and the 3D models (/models) need a logged-in user. The app's own scripts and styles are public, because the login page needs them.
 """
 
 from __future__ import annotations

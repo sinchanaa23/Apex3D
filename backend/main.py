@@ -18,7 +18,7 @@ from backend.config import (
     DEVICE,
     CUDA_AVAILABLE,
 )
-from backend.auth import require_user, router as auth_router
+from backend.auth import login_required, require_user, router as auth_router, session_user
 from backend.database import init_db, get_db_connection
 from backend.models import HealthResponse
 from backend.api import (
@@ -84,10 +84,10 @@ app.add_middleware(
 )
 
 # Mount API Routers
-# Accounts and the evaluation results are public. Everything that runs a model or touches storage needs a login.
+# Only the account routes and the health check are public. Everything else needs a login.
 app.include_router(auth_router)
-app.include_router(metrics_router)
 _login = [Depends(require_user)]
+app.include_router(metrics_router, dependencies=_login)
 app.include_router(recognition_router, dependencies=_login)
 app.include_router(classical_router, dependencies=_login)
 app.include_router(references_router, dependencies=_login)
@@ -143,13 +143,17 @@ if FRONTEND_DIST_DIR.exists() and FRONTEND_DIST_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIST_DIR)), name="static")
 
     @app.get("/{full_path:path}", include_in_schema=False)
-    async def serve_spa(full_path: str):
+    async def serve_spa(full_path: str, request: Request):
         # Allow API routes to pass through
         if full_path.startswith("api/") or full_path == "api" or full_path.startswith("docs") or full_path.startswith("openapi.json"):
             return JSONResponse(status_code=404, content={"detail": "API endpoint not found"})
         
-        file_path = FRONTEND_DIST_DIR / full_path
-        if file_path.exists() and file_path.is_file():
+        # The saved result files and the 3D models are data, not app code, so they need a login like the API does.
+        if full_path.startswith(("results/", "models/")) and login_required() and session_user(request) is None:
+            return JSONResponse(status_code=401, content={"detail": "Please log in to use this."})
+
+        file_path = (FRONTEND_DIST_DIR / full_path).resolve()
+        if FRONTEND_DIST_DIR.resolve() in file_path.parents and file_path.is_file():
             return FileResponse(str(file_path))
         
         index_html = FRONTEND_DIST_DIR / "index.html"

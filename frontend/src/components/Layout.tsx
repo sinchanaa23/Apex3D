@@ -55,6 +55,9 @@ function Account() {
 
 export function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
+  const { user, loginRequired } = useAuth()
+  // Logged-out visitors see the login and sign-up pages only, so the page links wait until they are in.
+  const showNav = Boolean(user) || !loginRequired
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [pathname])
@@ -68,7 +71,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Logo />
           <nav aria-label="Main" className="hidden gap-1 md:flex">
-            {NAV.map(({ to, label }) => (
+            {showNav && NAV.map(({ to, label }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -86,6 +89,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pb-28 sm:px-6 md:pb-12">{children}</main>
 
+      {showNav && (
       <nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-line bg-page/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
@@ -103,6 +107,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </NavLink>
         ))}
       </nav>
+      )}
     </div>
   )
 }

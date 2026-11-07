@@ -20,7 +20,7 @@ This document defines the formal request and response schemas agreed upon betwee
 | `POST` | `/api/reconstruct` | Enqueue background 3D mesh generation | Uploaded image or reference URL | `job_id`, queue status |
 | `GET` | `/api/jobs/{id}` | Poll real job progress, status and logs | Path param: `id` | Status, stage, progress 0-1, logs, asset URLs |
 | `GET` | `/api/assets/{id}/{file}` | Download generated 3D files | Path param: `id`, `file` (glb/obj/stl) | Binary mesh stream or validation JSON |
-| `GET` | `/api/metrics` | Retrieve offline notebook evaluation results | None | Real metrics JSON or "not available" state |
+| `GET` | `/api/metrics` | Retrieve offline notebook evaluation results | Login | Real metrics JSON or "not available" state |
 | `GET` | `/api/health` | Service health and GPU readiness | None | GPU status, queue size, uptime |
 
 ---
@@ -36,7 +36,7 @@ The app needs a login. A session is an HttpOnly cookie named `apex3d_session`, s
 | `POST /api/auth/logout` | none | `200 {status}`, cookie cleared | none |
 | `GET /api/auth/me` | none | always `200 {user: {...} or null, login_required: bool}` | none |
 
-Passwords: 8 to 128 characters, and not one of the most common. The routes in sections 1 to 6 (recognize, classical, references, reconstruct, jobs, assets, maintenance) answer `401 {"detail": "Please log in to use this."}` without a valid session. `/api/health` and `/api/metrics` are public. With `APEX3D_REQUIRE_LOGIN=0` nothing needs a login and `login_required` is `false`.
+Passwords: 8 to 128 characters, and not one of the most common. The routes in sections 1 to 6 (recognize, classical, references, reconstruct, jobs, assets, maintenance, metrics) answer `401 {"detail": "Please log in to use this."}` without a valid session. `/api/health` is public; every other route, `/results/*` and `/models/*` need a session. With `APEX3D_REQUIRE_LOGIN=0` nothing needs a login and `login_required` is `false`.
 
 ## 1. Recognition Endpoint: `POST /api/recognize`
 
