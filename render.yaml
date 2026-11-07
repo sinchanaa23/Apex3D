@@ -1,14 +1,13 @@
-# Render Blueprint: New > Blueprint, pick this repository. See docs/DEPLOY_RENDER.md.
+# Render Blueprint: New > Blueprint, pick this repository. Step-by-step guide: docs/DEPLOY_RENDER.md
 services:
   - type: web
     name: apex3d
     runtime: docker
     dockerfilePath: ./Dockerfile
-    # FREE PLAN, chosen because a card isn't available. Measured on the lean app from a clean clone: about 580 MB right after start-up,
-    # about 680 MB committed and a peak near 816 MB, against Render's free 512 MB (from memory), so it is expected to run out of memory,
-    # and a small share of one CPU would also make recognition slow. This image has no TripoSR (the Studio says so). Accounts are lost on
-    # every restart because the free plan has no disk. For a deployment that works use "standard" (2 GB) and restore the disk block below.
-    # See docs/DEPLOY_RENDER.md.
+    # FREE PLAN (no card needed). Measured on the lean image's code: the server needs about 260 MB (peak 257 MB), against Render's 512 MB
+    # (from memory, not checked). The free plan has no disk, so accounts are lost whenever the service restarts or wakes from sleep, and it
+    # sleeps after about 15 minutes without visitors. This image has no TripoSR, so the 3D Studio shows the showcase car and says the mesh
+    # builder isn't available. For a deployment that keeps accounts use a paid plan and restore the disk block below.
     plan: free
     healthCheckPath: /api/health
     # A deploy happens when you press Deploy, not on every push, so a teammate's broken commit can't take the live site down.
@@ -18,10 +17,12 @@ services:
         value: "1"
       - key: APEX3D_DISABLE_DOCS
         value: "1"
-      # Telling PyTorch avoids it starting more threads than the CPU can run.
+      # The free plan gives a small share of one CPU, so don't start more threads than that.
+      - key: APEX3D_ORT_THREADS
+        value: "1"
       - key: OMP_NUM_THREADS
         value: "1"
-    # Not allowed on the free plan. With "standard", add back:
+    # Not allowed on the free plan. With a paid plan, add back:
     #   disk:
     #     name: apex3d-data
     #     mountPath: /app/backend/storage

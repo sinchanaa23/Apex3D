@@ -1,0 +1,22 @@
+{
+  "photos": 200,
+  "sample_seed": 7,
+  "chosen_box_iou_onnx_vs_pytorch": {
+    "mean": 0.9968234896659851,
+    "min": 0.8712469935417175,
+    "share_at_least_0.99": 0.9296482412060302
+  },
+  "no_box_found": {
+    "pytorch": 1,
+    "onnx": 1
+  },
+  "mean_iou_with_true_box": {
+    "pytorch": 0.9208791115880013,
+    "onnx": 0.9200355905294418
+  },
+  "same_final_class": 199,
+  "correct": {
+    "pytorch": 189,
+    "onnx": 188
+  }
+}

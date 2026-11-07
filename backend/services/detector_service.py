@@ -1,27 +1,23 @@
 """
-Vehicle Detection Service using Faster R-CNN (torchvision) with robust fallback.
+Vehicle Detection Service using Faster R-CNN MobileNetV3 FPN, with a robust fallback.
 Detects vehicles (cars, trucks, buses) in uploaded images and produces bounding boxes and crops.
+
+Two ways to run the same network:
+  * ONNX Runtime, from checkpoints/detector_mobilenet.onnx (made by scripts/export_detector_onnx.py). This is what a small server uses:
+    it needs no PyTorch, which saves a few hundred megabytes of memory.
+  * PyTorch and torchvision, when that file is absent and they are installed (a developer's machine).
+The boxes are identical (checked in tests/test_detector_onnx.py). Everything after the raw boxes is shared.
 """
 
+import os
 import time
 import logging
+from pathlib import Path
 from typing import Tuple, List, Optional, Dict, Any
 import numpy as np
 from PIL import Image
-import torch
 
-try:
-    import torchvision
-    from torchvision.models.detection import (
-        fasterrcnn_mobilenet_v3_large_fpn,
-        FasterRCNN_MobileNet_V3_Large_FPN_Weights,
-    )
-    from torchvision.transforms import functional as TF
-    TORCHVISION_AVAILABLE = True
-except Exception:
-    TORCHVISION_AVAILABLE = False
-
-from backend.config import DEVICE
+from backend.config import CHECKPOINTS_DIR, DEVICE, ORT_THREADS
 from backend.models import BoundingBox
 
 logger = logging.getLogger(__name__)
@@ -41,6 +37,8 @@ class VehicleDetector:
 
     def __init__(self):
         self.model = None
+        self.session = None
+        self.backend = "none"  # "onnx", "torch" or "none" (the OpenCV fallback)
         self.device = DEVICE
         self.is_ready = False
         self._load_model()
@@ -52,18 +50,42 @@ class VehicleDetector:
         return cls._instance
 
     def _load_model(self):
-        """Attempts to load lightweight Faster R-CNN MobileNetV3 FPN."""
-        if not TORCHVISION_AVAILABLE:
-            logger.warning("Torchvision is not available. Detector will use fallback heuristic.")
+        """Loads Faster R-CNN MobileNetV3 FPN: from ONNX when the file exists, otherwise from torchvision."""
+        onnx_path = Path(os.getenv("APEX3D_DETECTOR_ONNX", CHECKPOINTS_DIR / "detector_mobilenet.onnx"))
+        if onnx_path.is_file():
+            try:
+                import onnxruntime as ort
+
+                options = ort.SessionOptions()
+                options.enable_cpu_mem_arena = False  # hands buffers back after each photo instead of keeping them: less memory
+                options.enable_mem_pattern = False
+                if ORT_THREADS:
+                    options.intra_op_num_threads = ORT_THREADS
+                    options.inter_op_num_threads = 1
+                self.session = ort.InferenceSession(str(onnx_path), options, providers=["CPUExecutionProvider"])
+                self.backend, self.is_ready = "onnx", True
+                logger.info("Faster R-CNN detector loaded from %s (ONNX Runtime, no PyTorch needed)", onnx_path)
+                return
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Could not load the ONNX detector %s: %s. Trying torchvision.", onnx_path, e)
+
+        try:
+            import torch
+            from torchvision.models.detection import (
+                fasterrcnn_mobilenet_v3_large_fpn,
+                FasterRCNN_MobileNet_V3_Large_FPN_Weights,
+            )
+        except Exception:
+            logger.warning("Neither detector_mobilenet.onnx nor torchvision is available. Detector will use the fallback heuristic.")
             return
 
         try:
-            logger.info("Initializing Faster R-CNN MobileNetV3 Large FPN...")
+            logger.info("Initializing Faster R-CNN MobileNetV3 Large FPN (torchvision)...")
             weights = FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT
             self.model = fasterrcnn_mobilenet_v3_large_fpn(weights=weights)
             self.model.to(self.device)
             self.model.eval()
-            self.is_ready = True
+            self.backend, self.is_ready = "torch", True
             logger.info("Faster R-CNN detector loaded successfully on %s", self.device)
         except Exception as e:
             logger.warning(
@@ -89,16 +111,9 @@ class VehicleDetector:
         start_time = time.perf_counter()
         width, height = image.size
 
-        if self.is_ready and self.model is not None:
+        if self.is_ready:
             try:
-                # Convert PIL to Tensor
-                tensor = TF.to_tensor(image).unsqueeze(0).to(self.device)
-                with torch.no_grad():
-                    predictions = self.model(tensor)[0]
-
-                boxes = predictions["boxes"].cpu().numpy()
-                scores = predictions["scores"].cpu().numpy()
-                labels = predictions["labels"].cpu().numpy()
+                boxes, scores, labels = self._raw_detect(image)
 
                 vehicle_boxes: List[BoundingBox] = []
                 for box, score, label in zip(boxes, scores, labels):
@@ -140,6 +155,21 @@ class VehicleDetector:
 
         # Fallback heuristic using OpenCV saliency/contours
         return self._heuristic_fallback_detect(image, start_time)
+
+    def _raw_detect(self, image: Image.Image) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """The network's raw output for one photo: boxes (n x 4, in pixels), scores and COCO labels."""
+        if self.backend == "onnx":
+            pixels = np.asarray(image.convert("RGB"), dtype=np.float32).transpose(2, 0, 1) / 255.0
+            boxes, labels, scores = self.session.run(None, {"image": np.ascontiguousarray(pixels)})
+            return boxes, scores, labels
+
+        import torch
+        from torchvision.transforms import functional as TF
+
+        tensor = TF.to_tensor(image).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            predictions = self.model(tensor)[0]
+        return predictions["boxes"].cpu().numpy(), predictions["scores"].cpu().numpy(), predictions["labels"].cpu().numpy()
 
     def _heuristic_fallback_detect(
         self, image: Image.Image, start_time: float

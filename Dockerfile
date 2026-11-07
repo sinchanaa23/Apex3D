@@ -1,7 +1,9 @@
 # Apex3D, lean image for Render (or any Docker host): the React app and the FastAPI backend in one container.
 #   docker build -t apex3d .
 #   docker run -p 10000:10000 -v apex3d-data:/app/backend/storage apex3d     then open http://localhost:10000
-# It does NOT include TripoSR (the experimental photo-to-mesh builder: 1.7 GB of weights and about 1.25 GB of memory while running).
+# The server in this image does NOT contain PyTorch. The vehicle detector is exported to ONNX during the build (stage 2) and run with ONNX
+# Runtime, like the classifier, which keeps the server near 260 MB of memory (measured) instead of over 500 MB.
+# It also does NOT include TripoSR (the experimental photo-to-mesh builder: 1.7 GB of weights and about 1.25 GB of memory while running).
 # The server notices, the 3D Studio says so, and the showcase car still works. For the full image use deploy/Dockerfile.full.
 
 # --- 1. Build the frontend -------------------------------------------------------------------------------------------
@@ -14,23 +16,26 @@ COPY frontend/ ./
 COPY results/ /results/
 RUN npm run build
 
-# --- 2. The server ---------------------------------------------------------------------------------------------------
+# --- 2. Export the detector to ONNX (PyTorch is used here only, and is thrown away) -----------------------------------
+FROM python:3.11-slim AS detector
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install onnx onnxscript
+WORKDIR /build
+COPY scripts/export_detector_onnx.py scripts/
+RUN python scripts/export_detector_onnx.py
+
+# --- 3. The server ---------------------------------------------------------------------------------------------------
 FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
-# OpenCV needs these two system libraries.
-RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 libgl1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# CPU-only PyTorch first (the default wheel is several times larger and drags in CUDA), then the rest.
-RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-COPY requirements.txt ./
-RUN pip install -r requirements.txt
-
-# The detector's weights are fetched once here, so the first request after a deploy doesn't wait for a download.
-RUN python -c "from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn as m, FasterRCNN_MobileNet_V3_Large_FPN_Weights as W; m(weights=W.DEFAULT)"
+COPY requirements-serve.txt ./
+RUN pip install -r requirements-serve.txt
 
 COPY backend/ backend/
 COPY checkpoints/ checkpoints/
+COPY --from=detector /build/checkpoints/detector_mobilenet.onnx checkpoints/detector_mobilenet.onnx
 COPY results/ results/
 COPY catalog/ catalog/
 COPY eval_P5_metrics.json ./

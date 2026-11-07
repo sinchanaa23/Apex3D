@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from PIL import Image
 import numpy as np
-import trimesh
 
 from backend.config import JOBS_DIR, CUDA_AVAILABLE, DEVICE
 from backend.database import (
@@ -163,7 +162,7 @@ class ReconstructionManager:
         """Background removal happens inside backend.reconstruction (TripoSR's own preprocessing), so nothing runs twice."""
         return img
 
-    def _run_reconstruction(self, image: Image.Image, options: Dict[str, Any]) -> trimesh.Trimesh:
+    def _run_reconstruction(self, image: Image.Image, options: Dict[str, Any]) -> "trimesh.Trimesh":
         """Runs Person A's TripoSR reconstruction. A failure is reported to the user, never replaced by an invented car."""
         from backend.reconstruction import ReconstructionError, reconstruct as triposr_reconstruct
 
@@ -171,6 +170,8 @@ class ReconstructionManager:
             mesh = triposr_reconstruct(image)
         except ReconstructionError as e:
             raise RuntimeError(f"3D reconstruction failed: {e}") from e
+        import trimesh
+
         if not isinstance(mesh, trimesh.Trimesh):
             raise RuntimeError("3D reconstruction did not return a mesh.")
         return mesh

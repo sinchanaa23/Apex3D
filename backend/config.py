@@ -4,7 +4,7 @@ Configuration and environment settings for Apex3D Backend.
 
 from pathlib import Path
 import os
-import torch
+import importlib.util
 
 # Base paths
 BACKEND_DIR = Path(__file__).resolve().parent
@@ -33,8 +33,19 @@ for path in [STORAGE_DIR, UPLOADS_DIR, REFERENCES_DIR, JOBS_DIR, CHECKPOINTS_DIR
     path.mkdir(parents=True, exist_ok=True)
 
 # Hardware / Device configuration
-CUDA_AVAILABLE = torch.cuda.is_available()
+# PyTorch is only on machines that train models or build meshes. A small server runs without it (ONNX Runtime does the model work),
+# so it is imported only when installed, and a server without it is simply on the CPU.
+CUDA_AVAILABLE = False
+if importlib.util.find_spec("torch") is not None:
+    try:
+        import torch
+
+        CUDA_AVAILABLE = torch.cuda.is_available()
+    except Exception:  # noqa: BLE001
+        CUDA_AVAILABLE = False
 DEVICE = "cuda" if CUDA_AVAILABLE else "cpu"
+# CPU threads for ONNX Runtime (0 = let it decide). Set 1 on a host with a single small CPU.
+ORT_THREADS = int(os.getenv("APEX3D_ORT_THREADS", "0"))
 
 # Classification confidence & decision thresholds
 # Top-1 prob >= CONFIDENT_THRESHOLD AND margin >= MARGIN_THRESHOLD -> confident

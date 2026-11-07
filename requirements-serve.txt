@@ -1,0 +1,15 @@
+# What the running server needs, WITHOUT PyTorch. Used by the lean Docker image (see Dockerfile), where the detector runs from an ONNX file
+# made at build time, so the server needs a few hundred megabytes less memory. For development (PyTorch detector fallback, the mesh builder,
+# training and evaluation) use requirements.txt and requirements-ml.txt instead.
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.5.0
+python-multipart>=0.0.9
+pillow>=10.0.0
+numpy>=1.24.0
+opencv-python-headless>=4.8.0
+scikit-image>=0.22.0
+trimesh>=4.0.0
+imagehash>=4.3.1
+requests>=2.31.0
+onnxruntime>=1.18.0

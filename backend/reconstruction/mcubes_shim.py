@@ -24,11 +24,12 @@ import sys
 import types
 
 import numpy as np
-import torch
 from skimage import measure
 
 
-def marching_cubes(volume: torch.Tensor, threshold: float) -> tuple[torch.Tensor, torch.Tensor]:
+def marching_cubes(volume: "torch.Tensor", threshold: float) -> "tuple[torch.Tensor, torch.Tensor]":
+    import torch  # imported here so that loading this module (the server does) doesn't load PyTorch
+
     vol = volume.detach().float().cpu().numpy()
     if not (vol.min() < threshold < vol.max()):
         # No surface crosses the threshold: return an empty mesh, as torchmcubes does.

@@ -4,14 +4,18 @@ Implements integrity checks (watertightness, manifold topology, degenerate faces
 component counts) and exports GLB, OBJ, STL files with full validation telemetry.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from pathlib import Path
-from typing import Tuple, Dict, Any, List
+from typing import TYPE_CHECKING, Tuple, Dict, Any, List
 import numpy as np
-import trimesh
 
 from backend.models import MeshValidationReport, ReconstructionAssets
+
+if TYPE_CHECKING:  # trimesh is only needed for these annotations here, so it is not imported when the server starts
+    import trimesh
 
 logger = logging.getLogger(__name__)
 

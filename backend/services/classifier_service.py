@@ -1,7 +1,7 @@
 """
 Fine-Grained Vehicle Classifier Service for 196 Stanford Cars classes.
-Supports PyTorch checkpoints, ONNX quantized models, and a feature-based fallback
-to ensure zero-downtime frontend development while offline training proceeds.
+Runs checkpoints/model_quantized.onnx with ONNX Runtime, using only NumPy and Pillow (no PyTorch), so a small server can hold it.
+A PyTorch checkpoint (.pth) is still accepted if one is present and PyTorch is installed.
 """
 
 import os
@@ -11,14 +11,12 @@ from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
 import numpy as np
 from PIL import Image
-import torch
-import torch.nn.functional as F
-from torchvision import transforms
 
 from backend.config import (
     CHECKPOINTS_DIR,
     NOTEBOOKS_DIR,
     DEVICE,
+    ORT_THREADS,
     CONFIDENT_THRESHOLD,
     AMBIGUOUS_MARGIN_THRESHOLD,
     REJECTED_THRESHOLD,
@@ -30,6 +28,22 @@ from backend.data.stanford_cars_classes import (
 from backend.models import VehiclePrediction
 
 logger = logging.getLogger(__name__)
+
+
+IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+
+
+def preprocess(image: Image.Image) -> np.ndarray:
+    """224 x 224 bilinear resize (exactly what torchvision's Resize does to a PIL image), scale to 0-1, normalise. Returns 1 x 3 x 224 x 224."""
+    resized = image.convert("RGB").resize((224, 224), Image.BILINEAR)
+    array = (np.asarray(resized, dtype=np.float32) / 255.0 - IMAGENET_MEAN) / IMAGENET_STD
+    return np.ascontiguousarray(array.transpose(2, 0, 1)[None])
+
+
+def softmax(logits: np.ndarray) -> np.ndarray:
+    exp = np.exp(logits - logits.max(axis=-1, keepdims=True))
+    return exp / exp.sum(axis=-1, keepdims=True)
 
 
 class ClassifierUnavailable(RuntimeError):
@@ -45,14 +59,6 @@ class VehicleClassifier:
         self.onnx_session = None
         self.model_type = "none"
         self.model_path = None
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225],
-            ),
-        ])
         self.reload_model()
 
     @classmethod
@@ -77,7 +83,12 @@ class VehicleClassifier:
                 if p.suffix == ".onnx":
                     try:
                         import onnxruntime as ort
-                        self.onnx_session = ort.InferenceSession(str(p))
+
+                        options = ort.SessionOptions()
+                        if ORT_THREADS:
+                            options.intra_op_num_threads = ORT_THREADS
+                            options.inter_op_num_threads = 1
+                        self.onnx_session = ort.InferenceSession(str(p), options, providers=["CPUExecutionProvider"])
                         self.model_type = "onnx"
                         self.model_path = str(p)
                         logger.info("Loaded ONNX classifier checkpoint from %s", p)
@@ -86,6 +97,8 @@ class VehicleClassifier:
                         logger.warning("Failed loading ONNX model from %s: %s", p, e)
                 elif p.suffix in [".pth", ".pt"]:
                     try:
+                        import torch  # only for a .pth checkpoint; the normal ONNX path never loads it
+
                         checkpoint = torch.load(str(p), map_location=self.device)
                         if isinstance(checkpoint, torch.nn.Module):
                             self.model = checkpoint
@@ -125,7 +138,10 @@ class VehicleClassifier:
         # Check if PyTorch model is active
         if self.model_type == "pytorch" and self.model is not None and hasattr(self.model, "eval"):
             try:
-                img_t = self.transform(crop_image.convert("RGB")).unsqueeze(0).to(self.device)
+                import torch
+                import torch.nn.functional as F
+
+                img_t = torch.from_numpy(preprocess(crop_image)).to(self.device)
                 with torch.no_grad():
                     logits = self.model(img_t)
                     probs = F.softmax(logits, dim=-1).squeeze(0).cpu().numpy()
@@ -137,11 +153,9 @@ class VehicleClassifier:
         # Check if ONNX session is active
         if self.model_type == "onnx" and self.onnx_session is not None:
             try:
-                img_t = self.transform(crop_image.convert("RGB")).unsqueeze(0).numpy()
                 input_name = self.onnx_session.get_inputs()[0].name
-                raw_out = self.onnx_session.run(None, {input_name: img_t})[0]
-                logits = torch.from_numpy(raw_out)
-                probs = F.softmax(logits, dim=-1).squeeze(0).numpy()
+                raw_out = self.onnx_session.run(None, {input_name: preprocess(crop_image)})[0]
+                probs = softmax(raw_out).squeeze(0)
                 return self._process_probabilities(probs, start_time)
             except Exception as e:
                 logger.error("Error executing ONNX model: %s", e)

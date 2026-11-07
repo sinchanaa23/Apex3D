@@ -13,8 +13,6 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import trimesh
-
 from backend.config import JOBS_DIR, PROJECT_ROOT, STORAGE_DIR
 from backend.database import create_job, update_job_status
 from backend.services.mesh_validator import export_mesh_package
@@ -66,6 +64,8 @@ def instant_job(class_id: int, mesh_source: str, options: Dict[str, Any]) -> Dic
     if mesh_source == "catalog":
         source = catalog_glb(class_id)
         assert source is not None
+        import trimesh  # loaded only when a mesh is read, so a server that never builds one doesn't pay for it
+
         loaded = trimesh.load(str(source), force="mesh")
         _, report = export_mesh_package(loaded, job_dir, job_id)
         shutil.copy2(source, job_dir / "mesh.glb")  # keeps the model's own materials
