@@ -64,11 +64,14 @@ Caveat: Stanford Cars annotates one car per image, so correct detections of othe
 | onnx_int8_dynamic | 28.4 MB | 151.3 ms | 91.98% | Intel i5-12500H, batch 1 |
 | onnx_int8_static_all | 28.7 MB | 21.6 ms | 86.11% | Intel i5-12500H, batch 1 |
 | onnx_int8_static_matmul (deployed) | 34.6 MB | 19.4 ms | 92.18% | Intel i5-12500H, batch 1 |
+| Hybrid (deep_plus_geometry): deployed deep model + geometry features + linear head | 35.8 MB | 22.6 ms | 92.09% | see note below |
 | Classical model, including feature extraction | 2.5 MB | 15 ms | 17.32% | Intel i5-1135G7 |
 | ResNet-50 detector | - | 5909 ms (median) | - | cpu, Intel i5-1135G7 |
 | MobileNetV3 detector | - | 769 ms (median) | - | cpu, Intel i5-1135G7 |
 
 Optimisation: static INT8 quantization of the MatMul layers. Timings come from different laptops, so don't compare times between the two CPUs directly.
+
+Hybrid cost: the deep model's 34.6 MB and 19.4 ms are Person A's figures. Computing the geometry features (2.1 ms) and applying the linear head (1.1 ms, 1.2 MB) were timed here on 200 test crops, so the hybrid total mixes two machines. The extra steps are small next to the deep model.
 
 ## 5. Robustness (performance under varying conditions)
 

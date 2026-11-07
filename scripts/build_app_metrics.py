@@ -120,7 +120,9 @@ def comparison_section() -> dict | str:
         rows.append({"approach": "Deep (deployed)", "top1": variant["test_top1"], "top5": variant["test_top5"], "inference_ms": variant["cpu_latency_ms_b1"], "size_mb": variant["size_mb"]})
     if hybrid:
         name = hybrid["chosen_fusion"]
-        rows.append({"approach": f"Hybrid ({name})", "top1": hybrid["test"][name]["top1"], "top5": hybrid["test"][name]["top5"], "inference_ms": None, "size_mb": None})
+        cost = load("hybrid_cost")  # results/hybrid_cost.json, from scripts/measure_hybrid_cost.py
+        rows.append({"approach": f"Hybrid ({name})", "top1": hybrid["test"][name]["top1"], "top5": hybrid["test"][name]["top5"],
+                     "inference_ms": cost["total_inference_ms"] if cost else None, "size_mb": cost["total_size_mb"] if cost else None})
     return section("classical_baseline.json", {"rows": rows}) if rows else NOT_AVAILABLE
 
 

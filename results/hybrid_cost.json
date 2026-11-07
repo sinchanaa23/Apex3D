@@ -1,0 +1,17 @@
+{
+  "experiment": "hybrid_cost",
+  "fusion": "deep_plus_geometry",
+  "test_images_timed": 200,
+  "deep_model": {
+    "size_mb": 34.59,
+    "cpu_latency_ms_b1": 19.4,
+    "from": "results/optimization_metrics.json (Person A's laptop)"
+  },
+  "geometry_features_ms_median": 2.0668500219471753,
+  "linear_head_ms_median": 1.0868000099435449,
+  "linear_head_size_mb": 1.246085,
+  "total_size_mb": 35.836085000000004,
+  "total_inference_ms": 22.55365003189072,
+  "extra_steps_timed_on": "Intel64 Family 6 Model 126 Stepping 5, GenuineIntel, batch 1, one thread",
+  "note": "The deep model's time is from another laptop; only the geometry features and the head were timed here. The extra steps are small next to the deep model, so the total is dominated by the published figure."
+}

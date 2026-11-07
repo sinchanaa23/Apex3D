@@ -423,8 +423,8 @@
      "approach": "Hybrid (deep_plus_geometry)",
      "top1": 0.920905360029847,
      "top5": 0.9759980101977366,
-     "inference_ms": null,
-     "size_mb": null
+     "inference_ms": 22.55365003189072,
+     "size_mb": 35.836085000000004
     }
    ]
   }

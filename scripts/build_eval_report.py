@@ -121,12 +121,17 @@ def build(usns: str, team: str) -> str:
             rows.append([label, f"{values['size_mb']:.1f} MB", f"{values['cpu_latency_ms_b1']:.1f} ms", pct(values["test_top1"]), "Intel i5-12500H, batch 1"])
     else:
         rows.append(["Deep classifier", MISSING, MISSING, MISSING, "-"])
+    cost = load("hybrid_cost")
+    if cost:
+        rows.append([f"Hybrid ({cost['fusion']}): deployed deep model + geometry features + linear head", f"{cost['total_size_mb']:.1f} MB", f"{cost['total_inference_ms']:.1f} ms", pct(hybrid["test"][cost["fusion"]]["top1"]) if hybrid else "-", "see note below"])
     if classical:
         rows.append(["Classical model, including feature extraction", f"{classical['model_size_mb']:.1f} MB", f"{classical['per_image_ms_cpu']:.0f} ms", pct(classical["test"]["top1"]), classical["cpu"]])
     for label, run in (("ResNet-50 detector", resnet), ("MobileNetV3 detector", mobilenet)):
         if run and run.get("seconds_per_image_median"):
             rows.append([label, "-", f"{run['seconds_per_image_median'] * 1000:.0f} ms (median)", "-", f"{run['device']}, Intel i5-1135G7"])
     out += [table(["Model", "Size", "Time per image", "Test Top-1", "Hardware"], rows), "", "Optimisation: static INT8 quantization of the MatMul layers. Timings come from different laptops, so don't compare times between the two CPUs directly.", ""]
+    if cost:
+        out += [f"Hybrid cost: the deep model's {cost['deep_model']['size_mb']:.1f} MB and {cost['deep_model']['cpu_latency_ms_b1']:.1f} ms are Person A's figures. Computing the geometry features ({cost['geometry_features_ms_median']:.1f} ms) and applying the linear head ({cost['linear_head_ms_median']:.1f} ms, {cost['linear_head_size_mb']:.1f} MB) were timed here on {cost['test_images_timed']} test crops, so the hybrid total mixes two machines. The extra steps are small next to the deep model.", ""]
 
     out += ["## 5. Robustness (performance under varying conditions)", ""]
     if robustness:
