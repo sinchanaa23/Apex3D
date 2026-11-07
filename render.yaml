@@ -4,11 +4,11 @@ services:
     name: apex3d
     runtime: docker
     dockerfilePath: ./Dockerfile
-    # FREE PLAN, chosen because a card isn't available. Limits (Render's, from memory): 512 MB of memory, a small share of one
-    # CPU, sleeps after about 15 minutes idle, and no persistent disk. Measured on the real code: the server needs about
-    # 330 to 580 MB with the models loaded and about 1.25 GB while building a 3D mesh, so on this plan the mesh builder will
-    # run out of memory and the service will restart, and recognition itself may too. Accounts are lost on every restart.
-    # For the full app use "standard" (2 GB) and restore the disk block below. See docs/DEPLOY_RENDER.md.
+    # FREE PLAN, chosen because a card isn't available. Measured on the lean app from a clean clone: about 580 MB right after start-up,
+    # about 680 MB committed and a peak near 816 MB, against Render's free 512 MB (from memory), so it is expected to run out of memory,
+    # and a small share of one CPU would also make recognition slow. This image has no TripoSR (the Studio says so). Accounts are lost on
+    # every restart because the free plan has no disk. For a deployment that works use "standard" (2 GB) and restore the disk block below.
+    # See docs/DEPLOY_RENDER.md.
     plan: free
     healthCheckPath: /api/health
     # A deploy happens when you press Deploy, not on every push, so a teammate's broken commit can't take the live site down.
