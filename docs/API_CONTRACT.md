@@ -25,6 +25,19 @@ This document defines the formal request and response schemas agreed upon betwee
 
 ---
 
+## 0. Accounts: `/api/auth/*`
+
+The app needs a login. A session is an HttpOnly cookie named `apex3d_session`, set by sign-up and log-in and cleared by log-out. Send requests from the same origin as the app, with cookies (the browser does this by default).
+
+| Endpoint | Body | Success | Errors |
+|---|---|---|---|
+| `POST /api/auth/signup` | `{name, email, password}` | `201 {user: {id, name, email}}` and a session cookie | `422` invalid input (`detail` is a readable string), `409` email already registered, `429` too many sign-ups |
+| `POST /api/auth/login` | `{email, password}` | `200 {user}` and a session cookie | `401` wrong email or password (same message for both), `429` too many failed attempts (`Retry-After` header) |
+| `POST /api/auth/logout` | none | `200 {status}`, cookie cleared | none |
+| `GET /api/auth/me` | none | always `200 {user: {...} or null, login_required: bool}` | none |
+
+Passwords: 8 to 128 characters, and not one of the most common. The routes in sections 1 to 6 (recognize, classical, references, reconstruct, jobs, assets, maintenance) answer `401 {"detail": "Please log in to use this."}` without a valid session. `/api/health` and `/api/metrics` are public. With `APEX3D_REQUIRE_LOGIN=0` nothing needs a login and `login_required` is `false`.
+
 ## 1. Recognition Endpoint: `POST /api/recognize`
 
 Performs vehicle detection using R-CNN, crops the primary vehicle, feeds it to the fine-grained classifier, and determines the confidence state.

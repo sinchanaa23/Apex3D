@@ -42,6 +42,9 @@ Use the confidence thresholds Person A validated (`results/classifier_metrics.js
 ```powershell
 $env:APEX3D_REJECTED_THRESHOLD = "0.52"
 $env:APEX3D_MARGIN_THRESHOLD = "0.34"
+# The app needs a login by default. Create an account on /signup the first time.
+# $env:APEX3D_REQUIRE_LOGIN = "0"            # switch the login requirement off for local work
+# $env:APEX3D_CORS_ORIGINS = "https://example.org"   # extra origins allowed to call the API with cookies
 python start_server.py
 ```
 

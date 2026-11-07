@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Box, FlaskConical, Images, ScanLine, ScanSearch, Upload } from 'lucide-react'
+import { Box, FlaskConical, Images, LogOut, ScanLine, ScanSearch, Upload } from 'lucide-react'
+import { useAuth } from '../state/auth'
 
 const NAV = [
   { to: '/upload', label: 'Upload', icon: Upload },
@@ -19,6 +20,36 @@ export function Logo() {
       </svg>
       Apex3D
     </Link>
+  )
+}
+
+/** Log in and sign up, or the user's name and a log out button. Hidden while the server answers, and when no login is required. */
+function Account() {
+  const { loading, user, loginRequired, logout } = useAuth()
+  const link = 'rounded-lg px-3 py-2 text-sm transition-colors hover:text-ink'
+  if (loading || !loginRequired) return <div className="w-10 md:w-0" />
+  if (user) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="hidden max-w-36 truncate text-sm text-ink-2 sm:inline" title={user.email}>
+          {user.name}
+        </span>
+        <button type="button" onClick={() => void logout()} className={`${link} inline-flex min-h-10 items-center gap-1.5 text-ink-2`}>
+          <LogOut aria-hidden className="size-4" />
+          Log out
+        </button>
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <NavLink to="/login" className={({ isActive }) => `${link} ${isActive ? 'bg-raised text-ink' : 'text-ink-2'}`}>
+        Log in
+      </NavLink>
+      <NavLink to="/signup" className={({ isActive }) => `${link} border border-line-strong ${isActive ? 'bg-raised text-ink' : 'text-ink'}`}>
+        Sign up
+      </NavLink>
+    </div>
   )
 }
 
@@ -49,6 +80,7 @@ export function Layout({ children }: { children: ReactNode }) {
               </NavLink>
             ))}
           </nav>
+          <Account />
         </div>
       </header>
 

@@ -12,6 +12,7 @@ import {
   type WireRecognition,
   type WireReference,
 } from './adapter'
+import { UNAUTHORIZED_EVENT } from './auth'
 import { normaliseImage } from '../lib/image'
 import type { MetricsResponse, Reference } from './types'
 
@@ -44,6 +45,7 @@ export function errorMessage(status: number, body: string): string {
   } catch {
     // Not JSON. The tunnel returns HTML pages when the laptop stops answering.
   }
+  if (status === 401) return 'Please log in to continue.'
   if (status === 413) return 'That file is too large for the server to accept.'
   if (status === 415) return 'The server does not accept that file type.'
   if (status === 404) return 'The server could not find that item. It may have been cleaned up.'
@@ -71,6 +73,8 @@ async function request<T>(path: string, init: RequestInit, { signal, timeoutMs =
   try {
     const response = await fetch(path, { ...init, signal: controller.signal })
     const body = await response.text()
+    // The session ended or there is none. The app listens for this and sends the user to the login page.
+    if (response.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
     if (!response.ok) throw new ApiError('http', errorMessage(response.status, body), response.status)
     try {
       return JSON.parse(body) as T

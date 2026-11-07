@@ -7,7 +7,7 @@ import os
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +18,7 @@ from backend.config import (
     DEVICE,
     CUDA_AVAILABLE,
 )
+from backend.auth import require_user, router as auth_router
 from backend.database import init_db, get_db_connection
 from backend.models import HealthResponse
 from backend.api import (
@@ -70,21 +71,27 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS configuration allowing local dev and tunnel access
+# The app is served from the same origin as the API, so no other website needs to call it. Allowing every origin together
+# with login cookies would let any website read a logged-in user's responses, so only the dev servers are listed.
+# Add more with APEX3D_CORS_ORIGINS="https://a.example,https://b.example".
+_extra_origins = [o.strip() for o in os.getenv("APEX3D_CORS_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000", "http://127.0.0.1:8000", *_extra_origins],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Mount API Routers
-app.include_router(recognition_router)
-app.include_router(classical_router)
-app.include_router(references_router)
-app.include_router(reconstruct_router)
+# Accounts and the evaluation results are public. Everything that runs a model or touches storage needs a login.
+app.include_router(auth_router)
 app.include_router(metrics_router)
+_login = [Depends(require_user)]
+app.include_router(recognition_router, dependencies=_login)
+app.include_router(classical_router, dependencies=_login)
+app.include_router(references_router, dependencies=_login)
+app.include_router(reconstruct_router, dependencies=_login)
 
 
 @app.get(
@@ -119,6 +126,7 @@ async def health_check():
     "/api/maintenance/cleanup",
     tags=["System"],
     summary="Purge Stale Temporary Files",
+    dependencies=[Depends(require_user)],
     description="Purges uploaded images and generated 3D files older than max_age_hours (default 1.0 hr). Preserves SQLite metadata.",
 )
 async def run_storage_cleanup(max_age_hours: float = 1.0):

@@ -333,6 +333,7 @@ export function mockApi(): Plugin {
           res.setHeader('content-type', 'text/plain')
           return res.end(`MOCK ${asset[2]}`)
         }
+        if (path === '/api/auth/me') return send(res, 200, { user: null, login_required: false }, 0)
         if (path === '/api/metrics') {
           if (scenario.metrics === 'error') return send(res, 500, { detail: 'Metrics files could not be read.' })
           return send(res, 200, metricsBody(scenario.metrics))
