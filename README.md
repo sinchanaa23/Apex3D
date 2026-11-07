@@ -12,6 +12,68 @@ Apex3D identifies the fine-grained make, model, and year of a vehicle in an uplo
 
 ---
 
+## Screenshots and demo
+
+**Demo video:** [`docs/demo/demo.mp4`](docs/demo/demo.mp4) is a screen recording of the full flow: upload, identity, references, 3D Studio and Research Lab. GitHub shows a download link for it rather than playing it inline.
+
+### Landing page
+
+![Landing page](docs/screenshots/01-landing.png)
+
+The headline, the two ways in (Identify a car, See the evaluation) and the 3D car that opens the app.
+
+### Identity
+
+![Identity](docs/screenshots/02-identity.png)
+
+A red Audi R8. The detector box (95%) and the classifier's answer are drawn on the photo. The right side shows the confidence ring (100%, margin 99.9%, state Confident), the Manufacturer, Model and Year as separate fields, and buttons to confirm the match or reject it. Timings: detection 1.97 s, classification 280 ms, total 2.25 s.
+
+### References
+
+![References](docs/screenshots/03-references.png)
+
+After the user confirms the car, the app lists reference photos of that exact model. Each shows its source and licence (here Wikimedia Commons, CC BY 4.0) and a 'Title matches model' flag. The clearest one is chosen as the input for 3D reconstruction, and the user can switch to their own photo.
+
+### 3D Studio: showcase model
+
+![3D Studio: showcase model](docs/screenshots/04-studio-showcase.png)
+
+A 3D car in the style of the matched car, painted with the colour taken from the photo (#ba283e) and given coupe proportions. It downloads as GLB, OBJ or STL. The Experimental mesh tab says 'not built' until the user asks for it.
+
+### 3D Studio: experimental mesh
+
+![3D Studio: experimental mesh](docs/screenshots/05-studio-mesh.png)
+
+A rough mesh TripoSR rebuilt from one reference photo. The validation panel is measured on the file: watertight and manifold, but 97 degenerate faces and 4 connected components, so asset readiness is 'Needs repair'. The page warns that the unseen sides are inferred and the scale is unknown.
+
+### Research Lab: robustness
+
+![Research Lab: robustness](docs/screenshots/06-lab-robustness.png)
+
+Top-1 of the deployed model at three severities of brightness, low light, blur, noise, low resolution and occlusion. Heavy blur, low resolution and large occlusion cost the most.
+
+### Research Lab: confidence and rejection
+
+![Research Lab: confidence and rejection](docs/screenshots/07-lab-confidence.png)
+
+Raising the confidence threshold lowers coverage (orange) and raises accuracy on the images kept (blue). The vertical line is the threshold the app uses (0.52).
+
+### Research Lab: classical vs deep vs hybrid
+
+![Research Lab: classical vs deep vs hybrid](docs/screenshots/08-lab-comparison.png)
+
+The three approaches on the same split, with Top-1, Top-5, inference time and size. Adding classical features to the deep model gave no gain.
+
+### Research Lab: ablation study
+
+![Research Lab: ablation study](docs/screenshots/09-lab-ablation.png)
+
+Each row removes or swaps one component of the pipeline and shows the Top-1 and the change against the baseline.
+
+The evaluation report [`eval_P5_T25.md`](eval_P5_T25.md) uses the same screenshots next to the numbers they show.
+
+---
+
 ## System Architecture
 
 ```

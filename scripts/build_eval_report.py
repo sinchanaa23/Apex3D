@@ -30,6 +30,27 @@ def largest_run(pattern: str) -> dict | None:
     return max(runs, key=lambda run: run["images"]) if runs else None
 
 
+SCREENSHOTS = {
+    "landing": ("01-landing.png", "Landing page. The headline, the two ways in (Identify a car, See the evaluation) and the 3D car that opens the app."),
+    "identity": ("02-identity.png", "Identity page for a red Audi R8. The detector box (95%) and the classifier's answer sit on the photo. The right side gives the confidence ring (100%, margin 99.9%, state Confident), the Manufacturer, Model and Year as separate fields, and buttons to confirm or reject. Timings: detection 1.97 s, classification 280 ms, total 2.25 s."),
+    "references": ("03-references.png", "Reference Studio. After the user confirms the car, the app lists reference photos of that exact model (here a front view from Wikimedia Commons, CC BY 4.0, flagged 'Title matches model'). The clearest one is picked as the reconstruction input, and the user can switch to their own photo or continue to the 3D Studio."),
+    "studio": ("04-studio-showcase.png", "3D Studio, showcase model. A 3D car in the style of the matched car (Audi R8 Coupe 2012), painted with the colour taken from the photo (#ba283e) and given coupe proportions. It can be downloaded as GLB, OBJ or STL. The Experimental mesh tab reads 'not built' until the user asks for it."),
+    "mesh": ("05-studio-mesh.png", "3D Studio, experimental mesh. TripoSR rebuilt a rough mesh from one reference photo. The validation panel is measured on the file: watertight and manifold, but 97 degenerate faces and 4 connected components, so asset readiness is 'Needs repair'. The page warns that the unseen sides are inferred and the scale is unknown."),
+    "robustness": ("06-lab-robustness.png", "Research Lab, robustness. Top-1 of the deployed model at three severities of each condition. Brightness, low light and noise cost a few points; heavy blur, low resolution and large occlusion cost the most."),
+    "confidence": ("07-lab-confidence.png", "Research Lab, confidence and rejection. Raising the confidence threshold lowers coverage (orange) and raises accuracy on the images kept (blue). The vertical line marks the threshold the app uses (0.52)."),
+    "comparison": ("08-lab-comparison.png", "Research Lab, classical against deep against hybrid, on the same split, with Top-1, Top-5, inference time and size. Adding classical features to the deep model gave no gain."),
+    "ablation": ("09-lab-ablation.png", "Research Lab, ablation study. Each row removes or swaps one component of the pipeline and shows the Top-1 and the change against the baseline."),
+}
+
+
+def figure(key: str) -> list[str]:
+    """A screenshot with its description, when the image file is in docs/screenshots/."""
+    name, caption = SCREENSHOTS[key]
+    if not (ROOT / "docs" / "screenshots" / name).exists():
+        return []
+    return [f"![{caption.split('.')[0]}](docs/screenshots/{name})", "", f"*{caption}*", ""]
+
+
 def pct(value) -> str:
     return f"{value * 100:.2f}%" if value is not None else MISSING
 
@@ -159,6 +180,7 @@ def build(usns: str, team: str) -> str:
     else:
         out += [f"{MISSING}. Needs the trained checkpoint.", ""]
 
+    out += figure("robustness")
     out += ["## 6. Confidence (prediction confidence and threshold analysis)", ""]
     if metrics:
         calibration, thresholds, states = metrics["calibration"], metrics["thresholds"], metrics["test"]["states"]
@@ -179,7 +201,9 @@ def build(usns: str, team: str) -> str:
         curve = [row for row in confidence["test_coverage_curve"] if row["accuracy_when_accepted"] is not None][::6]
         out += ["### Coverage against accuracy (test)", "", table(["Confidence threshold", "Images accepted", "Accuracy when accepted"], [[row["threshold"], pct(row["coverage"]), pct(row["accuracy_when_accepted"])] for row in curve]), ""]
 
+    out += figure("confidence")
     out += ["## Comparison: classical, deep and hybrid", "", "See section 1.", ""]
+    out += figure("comparison")
     if classical:
         out += ["### Classical feature families (validation)", ""]
         out += [table(["Features", "Dimensions", "Top-1", "Top-5"], [[row["features"], row["dimensions"], pct(row["top1"]), pct(row["top5"])] for row in classical["validation_by_family"]]), ""]
@@ -188,6 +212,7 @@ def build(usns: str, team: str) -> str:
         out += [f"Adaptive CLAHE changed classical validation Top-1 by {change:+.2f} percentage points, on 1,222 validation images. A change this size may be noise.", ""]
 
     out += ["## Ablation study", ""]
+    ablation_figure = figure("ablation")
     rows = []
     if classical:
         best = classical["validation_by_family"][-1]
@@ -218,6 +243,7 @@ def build(usns: str, team: str) -> str:
         out += [f"Deep crop ablations: {MISSING}. They need the trained checkpoint.", ""]
 
     analysis = ROOT / "docs" / "FAILURE_ANALYSIS.md"
+    out += ablation_figure
     out += ["## Failure cases", ""]
     detector_cases = load("failure_cases") or []
     classifier_failures = load("classifier_failure_cases")
@@ -234,6 +260,9 @@ def build(usns: str, team: str) -> str:
                 "The cases below are the most confident wrong answers, picked to show distinct causes. They are not a random sample.", ""]
         out += [table(["Case", "True label", "Model's answer", "Cause"], [[case["title"], case["actual"], case["predicted"], case["explanation"].replace("|", "/")] for case in classifier_failures["cases"]]), ""]
     out += ["Full write-ups with images: " + ", ".join(f"`{name}`" for name in ("docs/FAILURE_ANALYSIS.md", "docs/CLASSIFIER_FAILURES.md") if (ROOT / name).exists()) + "." if analysis.exists() else f"{MISSING}.", ""]
+    app_screens = [line for key in ("landing", "identity", "references", "studio", "mesh") for line in figure(key)]
+    if app_screens:
+        out += ["## The application", "", "Screenshots of the running app. A screen recording of the same flow is in `docs/demo/demo.mp4`.", ""] + app_screens
     return "\n".join(out)
 
 

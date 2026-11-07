@@ -130,6 +130,10 @@ Evaluated on 1000 randomly sampled test images. Clean deep Top-1: 91.80%.
 | occlusion | 0.25 | 79.30% | 2.70% | - |
 | occlusion | 0.4 | 60.70% | 0.90% | - |
 
+![Research Lab, robustness](docs/screenshots/06-lab-robustness.png)
+
+*Research Lab, robustness. Top-1 of the deployed model at three severities of each condition. Brightness, low light and noise cost a few points; heavy blur, low resolution and large occlusion cost the most.*
+
 ## 6. Confidence (prediction confidence and threshold analysis)
 
 Temperature scaling (T = 0.617) was fitted on validation, reducing validation calibration error from 0.208 to 0.034. Test calibration error is 0.024. Thresholds were chosen on validation: confident at probability ≥ 0.52 and margin ≥ 0.34, rejected below 0.52.
@@ -165,9 +169,17 @@ Limits: Whole photos with no detector crop. The app would crop to a detected car
 | 0.72 | 90.65% | 95.91% |
 | 0.9 | 83.02% | 97.06% |
 
+![Research Lab, confidence and rejection](docs/screenshots/07-lab-confidence.png)
+
+*Research Lab, confidence and rejection. Raising the confidence threshold lowers coverage (orange) and raises accuracy on the images kept (blue). The vertical line marks the threshold the app uses (0.52).*
+
 ## Comparison: classical, deep and hybrid
 
 See section 1.
+
+![Research Lab, classical against deep against hybrid, on the same split, with Top-1, Top-5, inference time and size](docs/screenshots/08-lab-comparison.png)
+
+*Research Lab, classical against deep against hybrid, on the same split, with Top-1, Top-5, inference time and size. Adding classical features to the deep model gave no gain.*
 
 ### Classical feature families (validation)
 
@@ -207,6 +219,10 @@ Adaptive CLAHE changed classical validation Top-1 by -0.33 percentage points, on
 
 Classical rows compare against all classical features, optimisation rows against ONNX FP32, no-crop against the annotated box, full-pipeline rows against the app's detector crop, backbone rows against ConvNeXt-Tiny, and hybrid rows against deep features alone.
 
+![Research Lab, ablation study](docs/screenshots/09-lab-ablation.png)
+
+*Research Lab, ablation study. Each row removes or swaps one component of the pipeline and shows the Top-1 and the change against the baseline.*
+
 ## Failure cases
 
 ### Detector and classical-ROI failures
@@ -235,3 +251,27 @@ The cases below are the most confident wrong answers, picked to show distinct ca
 | A large 'SOLD' sticker over the windscreen | Chevrolet Express Cargo Van 2007 | Chevrolet Express Van 2007 | A big 'SOLD' overlay covers part of the windscreen, and the dataset has two near-identical Express classes (Cargo Van and Van, both 2007). The model answered with the other Express class, so manufacturer, model and year were right and only the variant differed. Cause: the overlay hides detail, and the two classes look alike. Measured: the model gave Chevrolet Express Van 2007 with 100.0% calibrated confidence, and gave the correct class 0.00%. |
 
 Full write-ups with images: `docs/FAILURE_ANALYSIS.md`, `docs/CLASSIFIER_FAILURES.md`.
+
+## The application
+
+Screenshots of the running app. A screen recording of the same flow is in `docs/demo/demo.mp4`.
+
+![Landing page](docs/screenshots/01-landing.png)
+
+*Landing page. The headline, the two ways in (Identify a car, See the evaluation) and the 3D car that opens the app.*
+
+![Identity page for a red Audi R8](docs/screenshots/02-identity.png)
+
+*Identity page for a red Audi R8. The detector box (95%) and the classifier's answer sit on the photo. The right side gives the confidence ring (100%, margin 99.9%, state Confident), the Manufacturer, Model and Year as separate fields, and buttons to confirm or reject. Timings: detection 1.97 s, classification 280 ms, total 2.25 s.*
+
+![Reference Studio](docs/screenshots/03-references.png)
+
+*Reference Studio. After the user confirms the car, the app lists reference photos of that exact model (here a front view from Wikimedia Commons, CC BY 4.0, flagged 'Title matches model'). The clearest one is picked as the reconstruction input, and the user can switch to their own photo or continue to the 3D Studio.*
+
+![3D Studio, showcase model](docs/screenshots/04-studio-showcase.png)
+
+*3D Studio, showcase model. A 3D car in the style of the matched car (Audi R8 Coupe 2012), painted with the colour taken from the photo (#ba283e) and given coupe proportions. It can be downloaded as GLB, OBJ or STL. The Experimental mesh tab reads 'not built' until the user asks for it.*
+
+![3D Studio, experimental mesh](docs/screenshots/05-studio-mesh.png)
+
+*3D Studio, experimental mesh. TripoSR rebuilt a rough mesh from one reference photo. The validation panel is measured on the file: watertight and manifold, but 97 degenerate faces and 4 connected components, so asset readiness is 'Needs repair'. The page warns that the unseen sides are inferred and the scale is unknown.*

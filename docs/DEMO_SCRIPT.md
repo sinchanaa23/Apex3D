@@ -13,7 +13,7 @@
   - A clear photo of a car in the 196 classes, tested beforehand
   - A car that gives an ambiguous result
   - A car newer than 2012, or a van, that is rejected
-- [ ] Backup video open in another tab
+- [ ] Backup video open in another tab (a recording of the full flow is in `docs/demo/demo.mp4`; screenshots of each screen are in `docs/screenshots/`)
 
 ## The script
 
