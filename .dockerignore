@@ -11,6 +11,5 @@ tools
 notebooks
 docs
 tests
-scripts
 *.ipynb
 *.mp4
