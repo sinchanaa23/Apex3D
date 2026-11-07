@@ -1,6 +1,8 @@
-# Deploying Apex3D on Hugging Face Spaces (free, no card)
+# Deploying Apex3D on Hugging Face Spaces
 
-A free CPU Space gives the app about 2 CPUs and 16 GB of memory (Hugging Face's figures, from memory, not checked). That is enough for everything, including the 3D mesh builder, which peaked near 1.25 GB when measured here. Nothing in this guide has been run on Hugging Face yet, and the Docker build was never test-built locally, so the first upload is the real test.
+> **Correction: this is not free.** When the upload was tried, Hugging Face answered `402 Payment Required`: "Static Spaces are free for everyone, but hosting Gradio and Docker Spaces on free cpu-basic requires a PRO subscription." Apex3D needs a Docker Space, so it needs a **Hugging Face PRO subscription**, which is paid and needs a card. Earlier versions of this guide said it was free; that was wrong, written from memory without checking. Nothing was created on Hugging Face. The rest of this guide is correct for an account that has PRO.
+
+A basic CPU Space gives the app about 2 CPUs and 16 GB of memory (Hugging Face's figures, from memory, not checked). That is enough for everything, including the 3D mesh builder, which peaked near 1.25 GB when measured here. Nothing in this guide has been run on Hugging Face yet, and the Docker build was never test-built locally, so the first upload is the real test.
 
 ## What is prepared
 
@@ -12,7 +14,7 @@ A free CPU Space gives the app about 2 CPUs and 16 GB of memory (Hugging Face's 
 
 ## Steps (about 10 minutes of your time, then a long build)
 
-1. **Make a free account** at https://huggingface.co/join and confirm your email.
+1. **Make an account** at https://huggingface.co/join, confirm your email and subscribe to PRO at https://huggingface.co/pro (check the price there; you can cancel afterwards).
 2. **Make a token.** Go to https://huggingface.co/settings/tokens, choose **Create new token**, type **Write**, and copy it. Treat it like a password: paste it only into your own terminal, never into a chat or a file.
 3. **Upload.** In PowerShell, in the Apex3D folder:
    ```powershell

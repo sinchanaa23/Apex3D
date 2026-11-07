@@ -2,7 +2,8 @@
 # Same app as the root Dockerfile, with the changes Spaces needs:
 #   - the container runs as user 1000, not root, so every cache and writable folder belongs to that user;
 #   - the app listens on port 7860 (the app_port in the Space's README header);
-#   - a free CPU Space has 2 vCPUs and about 16 GB of memory, which fits the 3D mesh builder (peak about 1.25 GB).
+#   - a basic CPU Space has 2 vCPUs and about 16 GB of memory, which fits the 3D mesh builder (peak about 1.25 GB).
+#     Docker Spaces need a Hugging Face PRO subscription (paid); free accounts get a 402 error when creating one.
 
 # --- 1. Build the frontend -------------------------------------------------------------------------------------------
 FROM node:22-slim AS web
