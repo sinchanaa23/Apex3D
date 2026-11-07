@@ -26,7 +26,7 @@ export interface WireBox {
 export interface WireRecognition {
   car_detected: boolean
   bounding_box?: WireBox | null
-  predictions: { class_id: number; class_name: string; probability: number }[]
+  predictions: { class_id: number; class_name: string; probability: number; make?: string; model?: string; year?: number; body_style?: string }[]
   confidence_state: RecognizeResponse['confidence']['state']
   confidence_score: number
   margin: number
@@ -40,7 +40,7 @@ export function adaptRecognition(wire: WireRecognition, size: { width: number; h
   return {
     image_size: size,
     detection: wire.car_detected && box ? { box: [box.x1, box.y1, box.x2, box.y2], label: box.label, score: box.confidence } : null,
-    top5: wire.predictions.map((p) => ({ class_id: p.class_id, label: p.class_name, probability: p.probability })),
+    top5: wire.predictions.map((p) => ({ class_id: p.class_id, label: p.class_name, probability: p.probability, make: p.make, model: p.model, year: p.year, body_style: p.body_style })),
     confidence: {
       state: wire.confidence_state,
       top1: wire.confidence_score,
@@ -435,6 +435,7 @@ export function adaptMetrics(wire: WireMetrics): MetricsResponse {
     run: sectionFrom(classifierDoc, classifierDoc ? runFromDoc(classifierDoc) : null),
     calibration: sectionFrom(classifierDoc, classifierDoc ? calibrationFromDoc(classifierDoc) : null),
     states: sectionFrom(classifierDoc, classifierDoc ? statesFromDoc(classifierDoc) : null),
+    out_of_taxonomy: prefer('out_of_taxonomy', 'not available'),
     robustness: prefer(
       'robustness',
       hasRows(m.robustness)

@@ -12,6 +12,7 @@ import { rise, stagger } from '../components/hud/PageShell'
 import { PhotoUpload } from '../components/PhotoUpload'
 import { PageHeader, Timings, hudPrimary, hudSecondary } from '../components/States'
 import { percent } from '../lib/format'
+import { describeVehicle } from '../lib/vehicle'
 import { useSession } from '../state/session'
 
 const HEADLINE: Record<ConfidenceState, string> = {
@@ -23,6 +24,31 @@ const GAUGE_COLOUR: Record<ConfidenceState, string> = {
   confident: 'var(--color-good)',
   ambiguous: 'var(--color-warning)',
   rejected: 'var(--color-critical)',
+}
+
+/** The three things the task asks for, as separate labelled fields: manufacturer, model and manufacturing year. */
+function VehicleFacts({ prediction }: { prediction: ClassPrediction }) {
+  const facts = describeVehicle(prediction.label, prediction)
+  const fields: [string, string][] = [
+    ['Manufacturer', facts.make],
+    ['Model', facts.model],
+    ['Year', facts.year != null ? String(facts.year) : 'Unknown'],
+  ]
+  return (
+    <motion.dl variants={rise} className="hud-panel mt-4 grid grid-cols-3 divide-x divide-line" aria-label="Predicted manufacturer, model and year">
+      {fields.map(([name, value]) => (
+        <div key={name} className="min-w-0 px-4 py-3">
+          <dt className="font-mono text-[11px] tracking-[0.18em] text-ink-3 uppercase">{name}</dt>
+          <dd className="mt-1 break-words text-lg font-semibold tracking-tight">{value}</dd>
+        </div>
+      ))}
+      {facts.bodyStyle && (
+        <p className="col-span-3 border-t border-line px-4 py-2 text-xs text-ink-3">
+          Body style: <span className="text-ink-2">{facts.bodyStyle}</span>
+        </p>
+      )}
+    </motion.dl>
+  )
 }
 
 export default function Identity() {
@@ -94,6 +120,7 @@ export default function Identity() {
           </motion.h1>
         )}
         {state !== 'confident' && !chosen && <p className="mt-1 text-sm text-ink-3">Shown: the model's top guess, not confirmed.</p>}
+        {(chosen ?? best) && <VehicleFacts prediction={(chosen ?? best) as ClassPrediction} />}
         {confidence.reason && <p className="mt-3 text-sm text-ink-2">{confidence.reason}</p>}
 
         <motion.div variants={rise} className="hud-panel mt-5">
@@ -166,6 +193,9 @@ export default function Identity() {
         <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-line pt-4 text-sm">
           <Link to="/classical" className="text-ink-2 underline underline-offset-4 hover:text-ink">
             See the classical CV stages
+          </Link>
+          <Link to="/lab" className="text-ink-2 underline underline-offset-4 hover:text-ink">
+            Compare classical, deep and hybrid
           </Link>
           <Link to="/upload" className="text-ink-2 underline underline-offset-4 hover:text-ink">
             Try another photo

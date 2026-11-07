@@ -1,0 +1,162 @@
+{
+  "experiment": "out_of_taxonomy",
+  "model": "checkpoints/model_quantized.onnx (deployed)",
+  "thresholds": {
+    "confident_p1": 0.52,
+    "confident_margin": 0.34,
+    "reject_below_p1": 0.52,
+    "val_confident_coverage": 0.9337152209492635,
+    "val_confident_accuracy": 0.9500438212094654,
+    "reject_rule_note": "chosen on validation"
+  },
+  "temperature": 0.6166166067123413,
+  "source": "Caltech-101 test split, Hugging Face Multimodal-Fatima/Caltech101_not_background_test",
+  "other_vehicle_classes": [
+    "airplanes",
+    "motorbikes",
+    "helicopter",
+    "ferry",
+    "ketch",
+    "schooner"
+  ],
+  "groups": {
+    "other_vehicles": {
+      "images": 412,
+      "rejected": 0.9150485436893204,
+      "ambiguous": 0.0,
+      "confident": 0.08495145631067962,
+      "mean_top_probability": 0.2114575356245041
+    },
+    "other_things": {
+      "images": 600,
+      "rejected": 0.9833333333333333,
+      "ambiguous": 0.0,
+      "confident": 0.016666666666666666,
+      "mean_top_probability": 0.14579948782920837
+    },
+    "in_class_uncropped": {
+      "images": 1200,
+      "rejected": 0.12333333333333334,
+      "ambiguous": 0.013333333333333334,
+      "confident": 0.8633333333333333,
+      "mean_top_probability": 0.8641598224639893
+    }
+  },
+  "separation_auroc": 0.9774036561264823,
+  "sweep": [
+    {
+      "threshold": 0.1,
+      "in_class_accepted": 0.9975,
+      "other_vehicles_accepted": 0.7038834951456311,
+      "other_things_accepted": 0.5483333333333333
+    },
+    {
+      "threshold": 0.15,
+      "in_class_accepted": 0.9908333333333333,
+      "other_vehicles_accepted": 0.46359223300970875,
+      "other_things_accepted": 0.31333333333333335
+    },
+    {
+      "threshold": 0.2,
+      "in_class_accepted": 0.9783333333333334,
+      "other_vehicles_accepted": 0.33737864077669905,
+      "other_things_accepted": 0.19833333333333333
+    },
+    {
+      "threshold": 0.25,
+      "in_class_accepted": 0.97,
+      "other_vehicles_accepted": 0.2524271844660194,
+      "other_things_accepted": 0.13666666666666666
+    },
+    {
+      "threshold": 0.3,
+      "in_class_accepted": 0.9541666666666667,
+      "other_vehicles_accepted": 0.19174757281553398,
+      "other_things_accepted": 0.095
+    },
+    {
+      "threshold": 0.35,
+      "in_class_accepted": 0.94,
+      "other_vehicles_accepted": 0.16262135922330098,
+      "other_things_accepted": 0.06166666666666667
+    },
+    {
+      "threshold": 0.4,
+      "in_class_accepted": 0.9225,
+      "other_vehicles_accepted": 0.13592233009708737,
+      "other_things_accepted": 0.041666666666666664
+    },
+    {
+      "threshold": 0.45,
+      "in_class_accepted": 0.905,
+      "other_vehicles_accepted": 0.11407766990291263,
+      "other_things_accepted": 0.023333333333333334
+    },
+    {
+      "threshold": 0.5,
+      "in_class_accepted": 0.8875,
+      "other_vehicles_accepted": 0.09223300970873786,
+      "other_things_accepted": 0.02
+    },
+    {
+      "threshold": 0.55,
+      "in_class_accepted": 0.8716666666666667,
+      "other_vehicles_accepted": 0.07524271844660194,
+      "other_things_accepted": 0.015
+    },
+    {
+      "threshold": 0.6,
+      "in_class_accepted": 0.8508333333333333,
+      "other_vehicles_accepted": 0.06310679611650485,
+      "other_things_accepted": 0.013333333333333334
+    },
+    {
+      "threshold": 0.65,
+      "in_class_accepted": 0.8283333333333334,
+      "other_vehicles_accepted": 0.050970873786407765,
+      "other_things_accepted": 0.011666666666666667
+    },
+    {
+      "threshold": 0.7,
+      "in_class_accepted": 0.8083333333333333,
+      "other_vehicles_accepted": 0.038834951456310676,
+      "other_things_accepted": 0.008333333333333333
+    },
+    {
+      "threshold": 0.75,
+      "in_class_accepted": 0.7958333333333333,
+      "other_vehicles_accepted": 0.02912621359223301,
+      "other_things_accepted": 0.006666666666666667
+    },
+    {
+      "threshold": 0.8,
+      "in_class_accepted": 0.7733333333333333,
+      "other_vehicles_accepted": 0.024271844660194174,
+      "other_things_accepted": 0.0033333333333333335
+    },
+    {
+      "threshold": 0.85,
+      "in_class_accepted": 0.7441666666666666,
+      "other_vehicles_accepted": 0.024271844660194174,
+      "other_things_accepted": 0.0033333333333333335
+    },
+    {
+      "threshold": 0.9,
+      "in_class_accepted": 0.7066666666666667,
+      "other_vehicles_accepted": 0.014563106796116505,
+      "other_things_accepted": 0.0033333333333333335
+    },
+    {
+      "threshold": 0.95,
+      "in_class_accepted": 0.6508333333333334,
+      "other_vehicles_accepted": 0.0048543689320388345,
+      "other_things_accepted": 0.0033333333333333335
+    }
+  ],
+  "limits": [
+    "Whole photos with no detector crop. The app would crop to a detected car first.",
+    "Caltech-101 photos are older and smaller than Stanford Cars.",
+    "Caltech-101 has no newer car models, which is the likeliest real case, so this measures non-car inputs only.",
+    "In-class images are scored uncropped here so both sides are treated alike."
+  ]
+}

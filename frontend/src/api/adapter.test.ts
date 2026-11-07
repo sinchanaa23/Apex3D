@@ -305,3 +305,29 @@ describe("adaptClassical with Person B's format", () => {
     expect(result.features).toEqual({ aspect_ratio: 2 })
   })
 })
+
+describe('adaptMetrics with an out-of-taxonomy section', () => {
+  const section = {
+    source: 'results/out_of_taxonomy.json',
+    generated_at: '2026-11-07T01:00:00+00:00',
+    data: {
+      rows: [
+        { group: 'Other vehicles', images: 600, rejected: 0.7, ambiguous: 0.2, confident: 0.1 },
+        { group: 'Stanford Cars photos (in the 196 classes), uncropped', images: 1200, rejected: 0.05, ambiguous: 0.1, confident: 0.85 },
+      ],
+      auroc: 0.93,
+      limits: ['Whole photos with no detector crop.'],
+    },
+  }
+
+  it('passes the section through as it is', () => {
+    const result = adaptMetrics(wire({ out_of_taxonomy: section }))
+    const found = available<{ rows: { confident: number }[]; auroc: number }>(result.out_of_taxonomy)
+    expect(found.data.rows).toHaveLength(2)
+    expect(found.data.auroc).toBeCloseTo(0.93)
+    expect(found.source).toBe('results/out_of_taxonomy.json')
+  })
+  it('says not available when the file has not been produced', () => {
+    expect(adaptMetrics(wire({})).out_of_taxonomy).toBe('not available')
+  })
+})

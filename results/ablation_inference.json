@@ -1,0 +1,15 @@
+{
+  "experiment": "ablation_inference",
+  "model": "checkpoints/model_quantized.onnx (deployed)",
+  "with_annotated_box_crop": {
+    "top1": 0.920159184181072,
+    "top5": 0.983957219251337,
+    "macro_f1": 0.9190298181559295
+  },
+  "without_any_crop_full_image": {
+    "top1": 0.8614600174107698,
+    "top5": 0.9562243502051984,
+    "macro_f1": 0.8625291541149096
+  },
+  "note": "Detector-crop rows need results from scripts/evaluate_detector.py on the full test set and are not part of this run."
+}

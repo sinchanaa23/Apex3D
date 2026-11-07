@@ -1,0 +1,302 @@
+{
+  "experiment": "robustness",
+  "model": "checkpoints/model_quantized.onnx (deployed)",
+  "images": 1000,
+  "deep_clean": {
+    "top1": 0.918,
+    "top5": 0.982,
+    "macro_f1": 0.9056699106585208
+  },
+  "conditions": [
+    {
+      "corruption": "brightness",
+      "severity": 0,
+      "level": 1.5,
+      "deep": {
+        "top1": 0.907,
+        "top5": 0.979,
+        "macro_f1": 0.8925982490062446
+      },
+      "classical": {
+        "top1": 0.111,
+        "top5": 0.28,
+        "macro_f1": 0.09383637440049836
+      }
+    },
+    {
+      "corruption": "brightness",
+      "severity": 1,
+      "level": 2.0,
+      "deep": {
+        "top1": 0.901,
+        "top5": 0.977,
+        "macro_f1": 0.8923956526040355
+      },
+      "classical": {
+        "top1": 0.086,
+        "top5": 0.232,
+        "macro_f1": 0.07418738191377804
+      }
+    },
+    {
+      "corruption": "brightness",
+      "severity": 2,
+      "level": 2.5,
+      "deep": {
+        "top1": 0.876,
+        "top5": 0.967,
+        "macro_f1": 0.8604627673744543
+      },
+      "classical": {
+        "top1": 0.071,
+        "top5": 0.199,
+        "macro_f1": 0.05879713946511283
+      }
+    },
+    {
+      "corruption": "low_light",
+      "severity": 0,
+      "level": 0.6,
+      "deep": {
+        "top1": 0.894,
+        "top5": 0.977,
+        "macro_f1": 0.8826331371156745
+      },
+      "classical": {
+        "top1": 0.116,
+        "top5": 0.243,
+        "macro_f1": 0.09978594597103588
+      },
+      "deep_with_adaptive_clahe": {
+        "top1": 0.889,
+        "top5": 0.973,
+        "macro_f1": 0.8767675775563781
+      }
+    },
+    {
+      "corruption": "low_light",
+      "severity": 1,
+      "level": 0.35,
+      "deep": {
+        "top1": 0.875,
+        "top5": 0.967,
+        "macro_f1": 0.8551512809690222
+      },
+      "classical": {
+        "top1": 0.082,
+        "top5": 0.205,
+        "macro_f1": 0.07304081619421011
+      },
+      "deep_with_adaptive_clahe": {
+        "top1": 0.862,
+        "top5": 0.965,
+        "macro_f1": 0.8449529451951872
+      }
+    },
+    {
+      "corruption": "low_light",
+      "severity": 2,
+      "level": 0.15,
+      "deep": {
+        "top1": 0.79,
+        "top5": 0.924,
+        "macro_f1": 0.7702174165052281
+      },
+      "classical": {
+        "top1": 0.041,
+        "top5": 0.133,
+        "macro_f1": 0.030173914845742115
+      },
+      "deep_with_adaptive_clahe": {
+        "top1": 0.768,
+        "top5": 0.909,
+        "macro_f1": 0.7472323581141208
+      }
+    },
+    {
+      "corruption": "blur",
+      "severity": 0,
+      "level": 1.0,
+      "deep": {
+        "top1": 0.907,
+        "top5": 0.978,
+        "macro_f1": 0.8921038998300664
+      },
+      "classical": {
+        "top1": 0.146,
+        "top5": 0.319,
+        "macro_f1": 0.12255317364938728
+      }
+    },
+    {
+      "corruption": "blur",
+      "severity": 1,
+      "level": 2.5,
+      "deep": {
+        "top1": 0.797,
+        "top5": 0.932,
+        "macro_f1": 0.7836116624968169
+      },
+      "classical": {
+        "top1": 0.092,
+        "top5": 0.253,
+        "macro_f1": 0.07397300632704368
+      }
+    },
+    {
+      "corruption": "blur",
+      "severity": 2,
+      "level": 5.0,
+      "deep": {
+        "top1": 0.527,
+        "top5": 0.699,
+        "macro_f1": 0.5374216127573329
+      },
+      "classical": {
+        "top1": 0.059,
+        "top5": 0.165,
+        "macro_f1": 0.035754639707565004
+      }
+    },
+    {
+      "corruption": "noise",
+      "severity": 0,
+      "level": 15.0,
+      "deep": {
+        "top1": 0.913,
+        "top5": 0.984,
+        "macro_f1": 0.9042440313593383
+      },
+      "classical": {
+        "top1": 0.13,
+        "top5": 0.286,
+        "macro_f1": 0.10499532668454778
+      }
+    },
+    {
+      "corruption": "noise",
+      "severity": 1,
+      "level": 35.0,
+      "deep": {
+        "top1": 0.885,
+        "top5": 0.975,
+        "macro_f1": 0.8727353446962155
+      },
+      "classical": {
+        "top1": 0.095,
+        "top5": 0.226,
+        "macro_f1": 0.07911156384417693
+      }
+    },
+    {
+      "corruption": "noise",
+      "severity": 2,
+      "level": 60.0,
+      "deep": {
+        "top1": 0.826,
+        "top5": 0.949,
+        "macro_f1": 0.8020348722737801
+      },
+      "classical": {
+        "top1": 0.062,
+        "top5": 0.164,
+        "macro_f1": 0.05115262607461958
+      }
+    },
+    {
+      "corruption": "low_resolution",
+      "severity": 0,
+      "level": 128,
+      "deep": {
+        "top1": 0.851,
+        "top5": 0.954,
+        "macro_f1": 0.834580317471244
+      },
+      "classical": {
+        "top1": 0.107,
+        "top5": 0.259,
+        "macro_f1": 0.07786466549478946
+      }
+    },
+    {
+      "corruption": "low_resolution",
+      "severity": 1,
+      "level": 64,
+      "deep": {
+        "top1": 0.515,
+        "top5": 0.758,
+        "macro_f1": 0.49702517932294915
+      },
+      "classical": {
+        "top1": 0.062,
+        "top5": 0.172,
+        "macro_f1": 0.04524101202037574
+      }
+    },
+    {
+      "corruption": "low_resolution",
+      "severity": 2,
+      "level": 32,
+      "deep": {
+        "top1": 0.09,
+        "top5": 0.227,
+        "macro_f1": 0.05938652866253136
+      },
+      "classical": {
+        "top1": 0.022,
+        "top5": 0.088,
+        "macro_f1": 0.01109874023499835
+      }
+    },
+    {
+      "corruption": "occlusion",
+      "severity": 0,
+      "level": 0.1,
+      "deep": {
+        "top1": 0.88,
+        "top5": 0.979,
+        "macro_f1": 0.865526777879046
+      },
+      "classical": {
+        "top1": 0.079,
+        "top5": 0.209,
+        "macro_f1": 0.06893709195980263
+      }
+    },
+    {
+      "corruption": "occlusion",
+      "severity": 1,
+      "level": 0.25,
+      "deep": {
+        "top1": 0.793,
+        "top5": 0.93,
+        "macro_f1": 0.7795713548357036
+      },
+      "classical": {
+        "top1": 0.027,
+        "top5": 0.095,
+        "macro_f1": 0.02486236969153314
+      }
+    },
+    {
+      "corruption": "occlusion",
+      "severity": 2,
+      "level": 0.4,
+      "deep": {
+        "top1": 0.607,
+        "top5": 0.842,
+        "macro_f1": 0.602371007452031
+      },
+      "classical": {
+        "top1": 0.009,
+        "top5": 0.046,
+        "macro_f1": 0.002570950506926669
+      }
+    }
+  ],
+  "classical_clean": {
+    "top1": 0.154,
+    "top5": 0.336,
+    "macro_f1": 0.13036302301179878
+  }
+}

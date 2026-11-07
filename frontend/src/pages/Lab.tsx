@@ -326,6 +326,33 @@ export default function Lab() {
             )}
           </Section>
 
+          <Section
+            title="Photos outside the 196 cars"
+            why="The classifier always names one of its 196 classes, so only the confidence rule protects against inputs it was never taught. This counts how often that rule fires on airplanes, motorbikes, boats, animals and objects, against Stanford Cars photos scored the same way."
+            value={metrics.data.out_of_taxonomy}
+          >
+            {(d) => (
+              <>
+                <Table
+                  head={['Photos', 'Images', 'Rejected', 'Ambiguous', 'Confident']}
+                  rows={d.rows.map((r) => [r.group, <Plain>{r.images.toLocaleString()}</Plain>, <Rate value={r.rejected} />, <Rate value={r.ambiguous} />, <Rate value={r.confident} />])}
+                />
+                {d.auroc != null && (
+                  <p className="mt-3 max-w-2xl text-sm text-ink-2">
+                    Telling in-class photos from outside ones by the top probability alone scores an AUROC of <span className="num text-ink">{d.auroc.toFixed(3)}</span> (1 is perfect, 0.5 is guessing).
+                  </p>
+                )}
+                {d.limits && d.limits.length > 0 && (
+                  <ul className="mt-3 max-w-2xl list-disc space-y-1 pl-5 text-sm text-ink-3">
+                    {d.limits.map((limit) => (
+                      <li key={limit}>{limit}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </Section>
+
           <Section title="Calibration" why="A calibrated model's stated confidence matches how often it is right. Temperature scaling, fitted on the validation set, corrects it. ECE is the average gap between the two, and lower is better." value={metrics.data.calibration}>
             {(d) => (
               <>

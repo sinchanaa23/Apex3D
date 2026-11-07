@@ -1,0 +1,57 @@
+{
+  "experiment": "hybrid",
+  "embeddings": "penultimate layer of checkpoints/model_quantized.onnx (deployed)",
+  "validation": {
+    "deep_only": {
+      "top1": 0.9222585924713584,
+      "top5": 0.9762684124386252,
+      "macro_f1": 0.9204680531009748,
+      "C": 0.01
+    },
+    "deep_plus_all_classical": {
+      "top1": 0.9206219312602292,
+      "top5": 0.969721767594108,
+      "macro_f1": 0.9183834172153184,
+      "C": 0.1
+    },
+    "deep_plus_hsv": {
+      "top1": 0.9198036006546645,
+      "top5": 0.9770867430441899,
+      "macro_f1": 0.9181731682805796,
+      "C": 0.01
+    },
+    "deep_plus_lbp": {
+      "top1": 0.9214402618657938,
+      "top5": 0.9754500818330606,
+      "macro_f1": 0.9192067711200365,
+      "C": 0.01
+    },
+    "deep_plus_hog": {
+      "top1": 0.9206219312602292,
+      "top5": 0.9762684124386252,
+      "macro_f1": 0.9183833605826087,
+      "C": 0.01
+    },
+    "deep_plus_geometry": {
+      "top1": 0.9222585924713584,
+      "top5": 0.9754500818330606,
+      "macro_f1": 0.9204277872443823,
+      "C": 0.01
+    }
+  },
+  "chosen_fusion": "deep_plus_geometry",
+  "fusion_helped_on_validation": false,
+  "test": {
+    "deep_only": {
+      "top1": 0.9217758985200846,
+      "top5": 0.9759980101977366,
+      "macro_f1": 0.9203773360250929
+    },
+    "deep_plus_geometry": {
+      "top1": 0.920905360029847,
+      "top5": 0.9759980101977366,
+      "macro_f1": 0.9194934287961288
+    }
+  },
+  "fusion_change_in_test_top1": -0.000870538490237549
+}

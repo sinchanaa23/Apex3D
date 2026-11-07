@@ -1,0 +1,71 @@
+{
+  "summary": {
+    "errors": 642,
+    "same_model_different_year": 41,
+    "same_make_different_model": 359,
+    "different_make": 242,
+    "errors_with_confidence_at_least_0_9": 196
+  },
+  "cases": [
+    {
+      "title": "A Jeep Compass is called a Grand Cherokee",
+      "image": "results/figures/classifier_failures/07654.jpg",
+      "source_image": "images/test/07654.jpg",
+      "predicted": "Jeep Grand Cherokee SUV 2012",
+      "actual": "Jeep Compass SUV 2012",
+      "confidence": 0.999728,
+      "true_class_probability": 4.4143835e-05,
+      "explanation": "The photo shows a black SUV with Jeep's seven-slot grille, which to us looks like a Grand Cherokee, not a Compass. If that is right, the model is correct and the dataset label is wrong. We cannot check the label independently, so it counts as an error here, but it is probably label noise. Measured: the model gave Jeep Grand Cherokee SUV 2012 with 100.0% calibrated confidence, and gave the correct class 0.00%."
+    },
+    {
+      "title": "Two vans that are the same vehicle with different badges",
+      "image": "results/figures/classifier_failures/06675.jpg",
+      "source_image": "images/test/06675.jpg",
+      "predicted": "GMC Savana Van 2012",
+      "actual": "Chevrolet Express Cargo Van 2007",
+      "confidence": 0.9995571,
+      "true_class_probability": 9.202148e-06,
+      "explanation": "The Chevrolet Express and the GMC Savana are the same van with different badges. This photo shows a GMC badge on the grille, so the model's answer matches what is visible and the label names the twin model. Cause: twin vehicles, so the label is ambiguous. Measured: the model gave GMC Savana Van 2012 with 100.0% calibrated confidence, and gave the correct class 0.00%."
+    },
+    {
+      "title": "An Audi TT and an Audi TT RS in a blurred photo",
+      "image": "results/figures/classifier_failures/07095.jpg",
+      "source_image": "images/test/07095.jpg",
+      "predicted": "Audi TT RS Coupe 2012",
+      "actual": "Audi TT Hatchback 2011",
+      "confidence": 0.9997247,
+      "true_class_probability": 1.3171149e-05,
+      "explanation": "The TT and the TT RS differ mostly in trim details such as the grille, bumpers and wheels, and this photo is motion-blurred, which removes those details. The model chose the RS coupe, the closest class of the same model. Cause: a fine trim difference, made worse by blur. The label also names a different year. Measured: the model gave Audi TT RS Coupe 2012 with 100.0% calibrated confidence, and gave the correct class 0.00%."
+    },
+    {
+      "title": "An Aston Martin V8 Vantage seen only from behind",
+      "image": "results/figures/classifier_failures/01821.jpg",
+      "source_image": "images/test/01821.jpg",
+      "predicted": "Aston Martin Virage Coupe 2012",
+      "actual": "Aston Martin V8 Vantage Coupe 2012",
+      "confidence": 0.99972826,
+      "true_class_probability": 3.8675043e-06,
+      "explanation": "This is a studio view from the rear three-quarter, which hides the front grille and air intakes that separate the models. Both the V8 Vantage and the Virage are low, long-bonnet Aston Martin coupes. Cause: the viewpoint hides the features that tell the models apart. Measured: the model gave Aston Martin Virage Coupe 2012 with 100.0% calibrated confidence, and gave the correct class 0.00%."
+    },
+    {
+      "title": "A Silverado 1500 and a Silverado 2500HD",
+      "image": "results/figures/classifier_failures/07627.jpg",
+      "source_image": "images/test/07627.jpg",
+      "predicted": "Chevrolet Silverado 2500HD Regular Cab 2012",
+      "actual": "Chevrolet Silverado 1500 Regular Cab 2012",
+      "confidence": 0.9995197,
+      "true_class_probability": 0.00016053887,
+      "explanation": "Both are Silverado regular cab pickups with the same cab and body. They differ in payload class and small details, which are hard to see from the side. Cause: near-identical models that differ by capacity, not by shape. Measured: the model gave Chevrolet Silverado 2500HD Regular Cab 2012 with 100.0% calibrated confidence, and gave the correct class 0.02%."
+    },
+    {
+      "title": "A large 'SOLD' sticker over the windscreen",
+      "image": "results/figures/classifier_failures/07699.jpg",
+      "source_image": "images/test/07699.jpg",
+      "predicted": "Chevrolet Express Van 2007",
+      "actual": "Chevrolet Express Cargo Van 2007",
+      "confidence": 0.9996573,
+      "true_class_probability": 4.8967482e-05,
+      "explanation": "A big 'SOLD' overlay covers part of the windscreen, and the dataset has two near-identical Express classes (Cargo Van and Van, both 2007). The model answered with the other Express class, so manufacturer, model and year were right and only the variant differed. Cause: the overlay hides detail, and the two classes look alike. Measured: the model gave Chevrolet Express Van 2007 with 100.0% calibrated confidence, and gave the correct class 0.00%."
+    }
+  ]
+}

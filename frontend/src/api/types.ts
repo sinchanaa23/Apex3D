@@ -8,6 +8,11 @@ export interface ClassPrediction {
   /** Stanford Cars label, e.g. "Audi TT Hatchback 2011". */
   label: string
   probability: number
+  /** Read from the backend. When absent, the page reads them from the label. */
+  make?: string | null
+  model?: string | null
+  year?: number | null
+  body_style?: string | null
 }
 
 export interface RecognizeResponse {
@@ -152,6 +157,13 @@ export interface StateMetrics {
   rows: { state: ConfidenceState; share: number; accuracy: number | null }[]
   rule?: string | null
 }
+export interface OutOfTaxonomyMetrics {
+  /** What happened to photos of things that are not one of the 196 cars. */
+  rows: { group: string; images: number; rejected: number; ambiguous: number; confident: number }[]
+  /** How well the top probability alone separates in-class photos from outside ones. */
+  auroc?: number | null
+  limits?: string[] | null
+}
 export interface RunInfo {
   rows: { label: string; value: string }[]
 }
@@ -184,5 +196,6 @@ export interface MetricsResponse {
   failure_cases?: MaybeSection<FailureCasesMetrics>
   calibration?: MaybeSection<CalibrationMetrics>
   states?: MaybeSection<StateMetrics>
+  out_of_taxonomy?: MaybeSection<OutOfTaxonomyMetrics>
   run?: MaybeSection<RunInfo>
 }

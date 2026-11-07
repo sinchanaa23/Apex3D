@@ -97,6 +97,18 @@ def confidence_section() -> dict | str:
     return NOT_AVAILABLE
 
 
+def out_of_taxonomy_section() -> dict | str:
+    measured = load("out_of_taxonomy")
+    if not measured:
+        return NOT_AVAILABLE
+    labels = {"in_class_uncropped": "Stanford Cars photos (in the 196 classes), uncropped", "other_vehicles": "Other vehicles: airplanes, motorbikes, helicopters, boats", "other_things": "Other things: animals, objects, scenes"}
+    return section("out_of_taxonomy.json", {
+        "rows": [{"group": labels[name], "images": values["images"], "rejected": values["rejected"], "ambiguous": values["ambiguous"], "confident": values["confident"]} for name, values in measured["groups"].items()],
+        "auroc": measured["separation_auroc"],
+        "limits": measured["limits"],
+    })
+
+
 def comparison_section() -> dict | str:
     classical, metrics, optimisation, hybrid = load("classical_baseline"), load("classifier_metrics"), load("optimization_metrics"), load("hybrid")
     rows = []
@@ -158,6 +170,10 @@ def failure_section() -> dict | str:
     if not path.exists():
         return NOT_AVAILABLE
     cases = json.loads(path.read_text(encoding="utf-8"))
+    # The classifier's own wrong answers, from the deployed model's predictions on the test set.
+    classifier_path = RESULTS / "classifier_failure_cases.json"
+    if classifier_path.exists():
+        cases = cases + json.loads(classifier_path.read_text(encoding="utf-8"))["cases"]
     return section(path.name, {"cases": [
         {"title": case["title"], "image": thumbnail(ROOT / case["image"]), "predicted": case["predicted"], "actual": case["actual"], "explanation": case["explanation"]}
         for case in cases
@@ -171,6 +187,7 @@ def main() -> None:
         "optimisation": optimisation_section(),
         "robustness": robustness_section(),
         "confidence": confidence_section(),
+        "out_of_taxonomy": out_of_taxonomy_section(),
         "comparison": comparison_section(),
         "ablation": ablation_section(),
         "confused_pairs": confused_pairs_section(),

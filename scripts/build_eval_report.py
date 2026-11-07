@@ -141,7 +141,15 @@ def build(usns: str, team: str) -> str:
         calibration, thresholds, states = metrics["calibration"], metrics["thresholds"], metrics["test"]["states"]
         out += [f"Temperature scaling (T = {calibration['temperature']:.3f}) was fitted on validation, reducing validation calibration error from {calibration['val_ece_before']:.3f} to {calibration['val_ece_after']:.3f}. Test calibration error is {metrics['test']['ece_calibrated']:.3f}. Thresholds were chosen on validation: confident at probability ≥ {thresholds['confident_p1']} and margin ≥ {thresholds['confident_margin']}, rejected below {thresholds['reject_below_p1']}.", ""]
         out += [table(["App state", "Share of test images", "Accuracy"], [[state, pct(values["share"]), pct(values["accuracy"])] for state, values in states.items()]), ""]
-        out += ["Out-of-taxonomy vehicles were not part of this test, so rejection of unknown cars isn't measured here.", ""]
+        outside = load("out_of_taxonomy")
+        if outside:
+            out += ["### Photos outside the 196 classes", "", "The classifier always names one of its 196 classes, so only the confidence rule protects against inputs it was never taught. "
+                    f"Measured on the Caltech-101 test split: {outside['source']}.", ""]
+            labels = {"in_class_uncropped": "Stanford Cars photos, uncropped (for comparison)", "other_vehicles": "Other vehicles (airplanes, motorbikes, helicopters, boats)", "other_things": "Other things (animals, objects, scenes)"}
+            out += [table(["Photos", "Images", "Rejected", "Ambiguous", "Confident"], [[labels[name], values["images"], pct(values["rejected"]), pct(values["ambiguous"]), pct(values["confident"])] for name, values in outside["groups"].items()]), "",
+                    f"Separating in-class from outside photos by top probability alone gives an AUROC of {outside['separation_auroc']:.3f}.", "", "Limits: " + " ".join(outside["limits"]), ""]
+        else:
+            out += ["Out-of-taxonomy vehicles were not part of this test, so rejection of unknown cars isn't measured here.", ""]
     else:
         out += [f"{MISSING}.", ""]
     if confidence:
@@ -180,7 +188,22 @@ def build(usns: str, team: str) -> str:
         out += [f"Deep crop ablations: {MISSING}. They need the trained checkpoint.", ""]
 
     analysis = ROOT / "docs" / "FAILURE_ANALYSIS.md"
-    out += ["## Failure cases", "", "See `docs/FAILURE_ANALYSIS.md`." if analysis.exists() else f"{MISSING}.", ""]
+    out += ["## Failure cases", ""]
+    detector_cases = load("failure_cases") or []
+    classifier_failures = load("classifier_failure_cases")
+    if detector_cases:
+        out += ["### Detector and classical-ROI failures", ""]
+        out += [table(["Case", "Result", "Cause"], [[case["title"], f"{case['predicted']} (true: {case['actual']})", case["explanation"].replace("|", "/")] for case in detector_cases]), ""]
+    if classifier_failures:
+        summary = classifier_failures["summary"]
+        errors = summary["errors"]
+        out += ["### Classifier failures (deployed model, real test set)", "",
+                f"{errors} of 8,041 test images were wrong: {pct(summary['same_model_different_year'] / errors)} same manufacturer and model with a different year, "
+                f"{pct(summary['same_make_different_model'] / errors)} same manufacturer with a different model, {pct(summary['different_make'] / errors)} a different manufacturer. "
+                f"{summary['errors_with_confidence_at_least_0_9']} errors still had at least 90% confidence.", "",
+                "The cases below are the most confident wrong answers, picked to show distinct causes. They are not a random sample.", ""]
+        out += [table(["Case", "True label", "Model's answer", "Cause"], [[case["title"], case["actual"], case["predicted"], case["explanation"].replace("|", "/")] for case in classifier_failures["cases"]]), ""]
+    out += ["Full write-ups with images: " + ", ".join(f"`{name}`" for name in ("docs/FAILURE_ANALYSIS.md", "docs/CLASSIFIER_FAILURES.md") if (ROOT / name).exists()) + "." if analysis.exists() else f"{MISSING}.", ""]
     return "\n".join(out)
 
 
