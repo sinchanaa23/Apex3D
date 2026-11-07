@@ -7,7 +7,7 @@ A reference to write from. It holds measured numbers with their source files, re
 - Problem: P5, Intelligent Fine-Grained Vehicle Recognition and Analysis System
 - Team ID: T25. USNs: 1RUA24CSE0461, 1RUA24CSE0467, 1RUA24CSE0445, 1RUA24CSE0453
 - Repository: https://github.com/sinchanaa23/Apex3D
-- Commit to quote (HEAD when this was generated): `d29635cd6103d2760e77bdaee2fdaf8aefaf5747`. Push everything and regenerate right before submitting so the hash is the final one.
+- Commit to quote (HEAD when this was generated): `0e3a14aa941a3f98098bef9706f4c1db6baa4a4d`. Push everything and regenerate right before submitting so the hash is the final one.
 - Live URL: https://apex3d-xvuc.onrender.com (Render free plan: accounts reset when it restarts, it sleeps after about 15 minutes idle, and the mesh builder is off). Checked from outside: /api/health answers with detector onnx and mesh_builder false, protected routes answer 401, /docs is hidden. Sign-up and recognition on the live site were not tested by the tool that wrote this.
 
 ## Section 1: the problem and the data
