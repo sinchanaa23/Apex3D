@@ -213,4 +213,5 @@ class HealthResponse(BaseModel):
     gpu_available: bool = False
     device: str = "cpu"
     queue_size: int = 0
+    mesh_builder: bool = True  # False when TripoSR isn't installed on this server
 

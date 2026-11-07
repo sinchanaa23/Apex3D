@@ -197,6 +197,16 @@ const hasSection = (metrics: MetricsResponse) => Object.entries(metrics).some(([
  * Person A saved under results/, so the Research Lab shows the trained model's real numbers even while the backend
  * does not read that folder. Nothing is invented: a section with no file behind it stays "not available".
  */
+/** What this server can do. A server that can't be reached is treated as able to, so a bad answer never blocks a feature. */
+export async function getCapabilities(signal?: AbortSignal): Promise<{ meshBuilder: boolean }> {
+  try {
+    const body = await request<{ mesh_builder?: boolean }>('/api/health', {}, { signal })
+    return { meshBuilder: body.mesh_builder !== false }
+  } catch {
+    return { meshBuilder: true }
+  }
+}
+
 export async function getMetrics(signal?: AbortSignal): Promise<MetricsResponse> {
   let fromApi: MetricsResponse | null = null
   let apiError: unknown = null

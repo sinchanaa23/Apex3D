@@ -279,3 +279,15 @@ def test_reconstruction_workflow(monkeypatch):
     val_resp = client.get(f"/api/assets/{job_id}/validation.json")
     assert val_resp.status_code == 200
     assert val_resp.json()["is_watertight"] is True
+
+
+def test_a_server_without_triposr_says_so_and_refuses_to_queue_a_mesh(monkeypatch):
+    """The lean deployment has no TripoSR: health reports it, and /api/reconstruct refuses at once instead of creating a job that can only fail."""
+    monkeypatch.setattr("backend.api.routes_reconstruct.mesh_builder_available", lambda: False)
+    monkeypatch.setattr("backend.main.mesh_builder_available", lambda: False)
+    assert client.get("/api/health").json()["mesh_builder"] is False
+    response = client.post("/api/reconstruct", files={"file": ("car.jpg", create_sample_car_image(), "image/jpeg")})
+    assert response.status_code == 503
+    assert "TripoSR" in response.json()["detail"] and "showcase" in response.json()["detail"]
+    monkeypatch.setattr("backend.main.mesh_builder_available", lambda: True)
+    assert client.get("/api/health").json()["mesh_builder"] is True

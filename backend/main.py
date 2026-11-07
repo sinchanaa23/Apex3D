@@ -29,6 +29,7 @@ from backend.api import (
     reconstruct_router,
     metrics_router,
 )
+from backend.reconstruction.triposr_backend import available as mesh_builder_available
 from backend.services.detector_service import VehicleDetector
 from backend.services.classifier_service import VehicleClassifier
 from backend.services.reconstruction_service import ReconstructionManager
@@ -142,6 +143,7 @@ async def health_check():
         gpu_available=CUDA_AVAILABLE,
         device=DEVICE,
         queue_size=queue_count,
+        mesh_builder=mesh_builder_available(),
     )
 
 

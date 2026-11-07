@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from PIL import Image
 
 from backend.config import UPLOADS_DIR, JOBS_DIR, MAX_UPLOAD_SIZE, ALLOWED_MIME_TYPES
+from backend.reconstruction.triposr_backend import available as mesh_builder_available
 from backend.models import (
     ReconstructionJobResponse,
     ReconstructionJobCreate,
@@ -74,6 +75,13 @@ async def create_reconstruction_job(
             return _enqueued(instant_job(class_id, "catalog", base_options))
         if source == "reference" and cache_dir(class_id):
             return _enqueued(instant_job(class_id, "reference", base_options))
+
+    # No ready-made mesh, and this server has no TripoSR: say so now, instead of creating a job that can only fail.
+    if not mesh_builder_available():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Building a mesh from a photo needs TripoSR, which is not installed on this server. Run Apex3D on your own computer with TripoSR installed to use it. The showcase model still works here.",
+        )
 
     upload_id = uuid.uuid4().hex[:10]
     target_path = None

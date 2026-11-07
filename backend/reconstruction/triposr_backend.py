@@ -87,6 +87,11 @@ _rembg_session = None
 _iso_backend = ""
 
 
+def available() -> bool:
+    """True when the TripoSR source is installed here (scripts/setup_triposr.ps1), so a mesh can be built on this server."""
+    return (TRIPOSR_DIR / "tsr" / "system.py").exists()
+
+
 def _import_tsr():
     global _iso_backend
     if not (TRIPOSR_DIR / "tsr" / "system.py").exists():

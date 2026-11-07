@@ -3,7 +3,7 @@ import type { Group } from 'three'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, CircleCheck, CircleMinus, Download, Library, TriangleAlert } from 'lucide-react'
-import { ApiError, assetUrl, getJob, reconstruct } from '../api/client'
+import { ApiError, assetUrl, getCapabilities, getJob, reconstruct } from '../api/client'
 import type { Job, JobResult, ValidationReport } from '../api/types'
 import { Attribution } from '../components/Attribution'
 import MeshViewer from '../components/MeshViewer'
@@ -190,6 +190,12 @@ const tabClass = (active: boolean) =>
 
 function StartPanel() {
   const [view, setView] = useState<'showcase' | 'mesh'>('showcase')
+  const [meshBuilder, setMeshBuilder] = useState<boolean | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    void getCapabilities(controller.signal).then((c) => setMeshBuilder(c.meshBuilder))
+    return () => controller.abort()
+  }, [])
   const { photo, identity, input } = useSession()
   const { canStart, start, busy, error } = useStartJob()
   const inputUrl = input?.kind === 'photo' ? photo?.url : input?.reference.image_url
@@ -217,11 +223,29 @@ function StartPanel() {
           Showcase model
         </button>
         <button type="button" role="tab" aria-selected={view === 'mesh'} className={tabClass(view === 'mesh')} onClick={() => setView('mesh')}>
-          Experimental mesh <span className="font-mono text-xs text-ink-3">not built</span>
+          Experimental mesh <span className="font-mono text-xs text-ink-3">{meshBuilder === false ? 'not available here' : 'not built'}</span>
         </button>
       </div>
       {view === 'showcase' && <ShowcaseBlock label={identity?.label} />}
-      {view === 'mesh' && (
+      {view === 'mesh' && meshBuilder === false && (
+        <div className="max-w-3xl">
+          <Card title="Experimental mesh: not available on this server">
+            <p className="text-sm text-ink-2">
+              Building a mesh from your photo needs TripoSR, a large model (about 1.7 GB) that runs best on a GPU. It isn't installed on this server, so the button is switched off.
+            </p>
+            <p className="mt-3 text-sm text-ink-2">
+              To try it, run Apex3D on your own computer and install TripoSR with <code className="font-mono text-ink">scripts/setup_triposr.ps1</code>. The steps are in the project's README.
+            </p>
+            <p className="mt-3 text-sm text-ink-2">The showcase model works here. It takes its colour from your photo and its proportions from the identified car, and downloads as GLB, OBJ or STL.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" className={secondaryButton} onClick={() => setView('showcase')}>
+                Back to the showcase model
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
+      {view === 'mesh' && meshBuilder !== false && (
         <div className="max-w-3xl">
           <Card title="Experimental: rebuild from a photo">
             <div className="flex items-center gap-3">
