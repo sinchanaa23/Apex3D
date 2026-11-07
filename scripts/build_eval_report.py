@@ -253,6 +253,28 @@ def build(usns: str, team: str, team_name: str | None = None, members: str | Non
 
     analysis = ROOT / "docs" / "FAILURE_ANALYSIS.md"
     out += ablation_figure
+    footprint, onnx_parity = load("deployment_footprint"), load("detector_onnx_parity")
+    out += ["## Deployment and serving footprint", ""]
+    if footprint:
+        out += [f"Live: {footprint['live_url']}. {footprint['hosting']}", "", f"Measured on {footprint['machine']}", ""]
+        rows = [[v["configuration"], f"{v['memory_after_startup_mb']} MB", f"{v['memory_peak_mb']} MB", f"{v['recognition_seconds'][0]:.2f} to {v['recognition_seconds'][1]:.2f} s", v["how"]] for v in footprint["server"]]
+        out += [table(["Server configuration", "Memory after start-up", "Memory at peak", "Time per recognition", "How measured"], rows), "",
+                "The detector was moved from PyTorch to ONNX Runtime (the same network, exported by `scripts/export_detector_onnx.py`) and the classifier's preprocessing from torchvision to NumPy and Pillow, so the server no longer loads PyTorch. "
+                "That cut memory at start-up from 577 MB to 207 MB and at peak from 816 MB to 257 MB, which is what lets it fit a 512 MB host.", ""]
+        rows = [[m["cpu_threads"], f"{m['seconds']} s ({m['seconds'] / 60:.1f} min)", f"{m['memory_peak_mb']} MB", m["note"]] for m in footprint["mesh_builder"]]
+        out += ["3D mesh builder (TripoSR on CPU), one mesh:", "", table(["CPU threads", "Time", "Whole-server memory at peak", "Note"], rows), "",
+                f"Online: {'on' if footprint['mesh_builder_online'] else 'off'}. {footprint['mesh_builder_online_reason']}", ""]
+    else:
+        out += [MISSING + " (needs results/deployment_footprint.json).", ""]
+    if onnx_parity:
+        n, box, gt = onnx_parity["photos"], onnx_parity["chosen_box_iou_onnx_vs_pytorch"], onnx_parity["mean_iou_with_true_box"]
+        out += [f"The ONNX detector is not bit-identical to PyTorch. On {n} random test photos (`scripts/check_detector_onnx.py`):", "",
+                table(["Measure", "PyTorch detector", "ONNX detector"],
+                      [["Mean IoU with the true box", f"{gt['pytorch']:.4f}", f"{gt['onnx']:.4f}"],
+                       ["Photos classified correctly", f"{onnx_parity['correct']['pytorch']} of {n}", f"{onnx_parity['correct']['onnx']} of {n}"],
+                       ["Photos with no box found", onnx_parity["no_box_found"]["pytorch"], onnx_parity["no_box_found"]["onnx"]]]), "",
+                f"The chosen box matches the PyTorch box with a mean IoU of {box['mean']:.4f} (lowest {box['min']:.3f}; {pct(box['share_at_least_0.99'])} of photos at IoU 0.99 or better), and {onnx_parity['same_final_class']} of {n} photos get the same final car class. "
+                "The detector figures in sections 2 and 3 were measured with the PyTorch detector.", ""]
     out += ["## Failure cases", ""]
     detector_cases = load("failure_cases") or []
     classifier_failures = load("classifier_failure_cases")

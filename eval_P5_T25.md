@@ -229,6 +229,39 @@ Classical rows compare against all classical features, optimisation rows against
 
 *Research Lab, ablation study. Each row removes or swaps one component of the pipeline and shows the Top-1 and the change against the baseline.*
 
+## Deployment and serving footprint
+
+Live: https://apex3d-xvuc.onrender.com. Render free plan, Docker (lean image). Render's own limits (512 MB memory, small share of one CPU, no disk, sleeps after about 15 minutes idle) are from memory and were not checked.
+
+Measured on the development laptop (Windows 11, Python 3.11). Not Render's hardware.
+
+| Server configuration | Memory after start-up | Memory at peak | Time per recognition | How measured |
+|---|---|---|---|---|
+| PyTorch detector (before) | 577 MB | 816 MB | 1.00 to 1.30 s | fresh clone of GitHub, real server, memory read with Windows counters |
+| ONNX detector, PyTorch and trimesh blocked | 207 MB | 257 MB | 0.64 to 1.10 s | real server code run in-process with torch, torchvision and trimesh unimportable (scripts/measure_lean_server.py) |
+| ONNX detector, serve-only environment (requirements-serve.txt, PyTorch not installed) | 213 MB | 395 MB | 0.91 to 1.63 s | real uvicorn server in a brand-new virtual environment, memory read with Windows counters |
+
+The detector was moved from PyTorch to ONNX Runtime (the same network, exported by `scripts/export_detector_onnx.py`) and the classifier's preprocessing from torchvision to NumPy and Pillow, so the server no longer loads PyTorch. That cut memory at start-up from 577 MB to 207 MB and at peak from 816 MB to 257 MB, which is what lets it fit a 512 MB host.
+
+3D mesh builder (TripoSR on CPU), one mesh:
+
+| CPU threads | Time | Whole-server memory at peak | Note |
+|---|---|---|---|
+| 16 | 247 s (4.1 min) | 1249 MB | whole server, sampled every 6 s |
+| 2 | 287 s (4.8 min) | 1057 MB | whole server, sampled every 2 s |
+
+Online: off. TripoSR needs about 1.25 GB while building a mesh, more than the free plan's memory, so the live site shows the showcase car and says the builder is off.
+
+The ONNX detector is not bit-identical to PyTorch. On 200 random test photos (`scripts/check_detector_onnx.py`):
+
+| Measure | PyTorch detector | ONNX detector |
+|---|---|---|
+| Mean IoU with the true box | 0.9209 | 0.9200 |
+| Photos classified correctly | 189 of 200 | 188 of 200 |
+| Photos with no box found | 1 | 1 |
+
+The chosen box matches the PyTorch box with a mean IoU of 0.9968 (lowest 0.871; 92.96% of photos at IoU 0.99 or better), and 199 of 200 photos get the same final car class. The detector figures in sections 2 and 3 were measured with the PyTorch detector.
+
 ## Failure cases
 
 ### Detector and classical-ROI failures

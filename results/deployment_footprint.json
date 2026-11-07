@@ -1,0 +1,57 @@
+{
+  "experiment": "deployment_footprint",
+  "machine": "the development laptop (Windows 11, Python 3.11). Not Render's hardware.",
+  "live_url": "https://apex3d-xvuc.onrender.com",
+  "hosting": "Render free plan, Docker (lean image). Render's own limits (512 MB memory, small share of one CPU, no disk, sleeps after about 15 minutes idle) are from memory and were not checked.",
+  "server": [
+    {
+      "configuration": "PyTorch detector (before)",
+      "how": "fresh clone of GitHub, real server, memory read with Windows counters",
+      "memory_after_startup_mb": 577,
+      "memory_peak_mb": 816,
+      "private_memory_mb": 678,
+      "recognition_seconds": [
+        1.0,
+        1.3
+      ]
+    },
+    {
+      "configuration": "ONNX detector, PyTorch and trimesh blocked",
+      "how": "real server code run in-process with torch, torchvision and trimesh unimportable (scripts/measure_lean_server.py)",
+      "memory_after_startup_mb": 207,
+      "memory_peak_mb": 257,
+      "recognition_seconds": [
+        0.64,
+        1.1
+      ],
+      "threads": 1
+    },
+    {
+      "configuration": "ONNX detector, serve-only environment (requirements-serve.txt, PyTorch not installed)",
+      "how": "real uvicorn server in a brand-new virtual environment, memory read with Windows counters",
+      "memory_after_startup_mb": 213,
+      "memory_peak_mb": 395,
+      "recognition_seconds": [
+        0.91,
+        1.63
+      ],
+      "threads": 1
+    }
+  ],
+  "mesh_builder": [
+    {
+      "cpu_threads": 16,
+      "seconds": 247,
+      "memory_peak_mb": 1249,
+      "note": "whole server, sampled every 6 s"
+    },
+    {
+      "cpu_threads": 2,
+      "seconds": 287,
+      "memory_peak_mb": 1057,
+      "note": "whole server, sampled every 2 s"
+    }
+  ],
+  "mesh_builder_online": false,
+  "mesh_builder_online_reason": "TripoSR needs about 1.25 GB while building a mesh, more than the free plan's memory, so the live site shows the showcase car and says the builder is off."
+}
