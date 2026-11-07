@@ -98,3 +98,6 @@ desktop.ini
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Report tooling: the intermediate HTML is not committed
+report/*.html

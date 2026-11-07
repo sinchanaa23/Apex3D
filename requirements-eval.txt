@@ -17,3 +17,5 @@ nbclient
 nbconvert
 ipykernel
 pytest
+markdown
+pypdf
