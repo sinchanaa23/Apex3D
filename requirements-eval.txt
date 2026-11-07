@@ -1,7 +1,7 @@
 # Person B: dataset preparation, classical CV and evaluation.
 # Versions are those used for the saved results, on Python 3.14. Install torch and torchvision first.
 numpy==2.5.4
-opencv-python-headless==5.0.0
+opencv-python-headless==5.0.0.93
 scikit-image==0.26.0
 scikit-learn==1.9.1
 pyarrow==26.0.1
