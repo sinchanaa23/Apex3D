@@ -88,7 +88,7 @@ The live path is **detector, crop, classifier, confidence rule**. The classical 
 | 3D Studio | `/studio`, `/studio/:jobId` | `POST /api/reconstruct`, `GET /api/jobs/{id}`, `GET /api/assets/{id}/{file}` | Showcase model, queue, logs, mesh viewer, validation, downloads |
 | Research Lab | `/lab` | `GET /api/metrics`, `/results/*.json` | Saved evaluation results, or "not available" |
 
-Every route above except the login pages needs a logged-in user. `GET /api/health` is the only other public route.
+Every route above except the login pages and the landing page (`/`, with the showcase car it loads from `/models/`) needs a logged-in user. `GET /api/health` is the only other public API route.
 
 ## How a photo moves through the app
 
