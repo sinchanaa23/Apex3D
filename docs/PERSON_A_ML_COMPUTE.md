@@ -150,7 +150,7 @@ To run it in the app: create an `onnxruntime.InferenceSession` with `intra_op_nu
 | To | What | Where |
 |---|---|---|
 | B, C | Checkpoint bundle: weights, architecture, input size, normalisation, class names, temperature, thresholds | `checkpoints/apex3d_convnext_tiny.pt` (team drive). Load with `notebooks/cls_lib.load_classifier` and predict with `cls_lib.predict_crop` |
-| C | App classifier: the deployed INT8 variant with the temperature built in, so it auto-loads (§5) | `checkpoints/model_quantized.onnx` (team drive); made by `scripts/export_app_classifier.py`, checked in `results/app_classifier_export.json` |
+| C | App classifier: the deployed INT8 variant with the temperature built in, so it auto-loads (§5) | `checkpoints/model_quantized.onnx`, **committed to Git** on `person-a` (34.6 MB, sha256 `0167758b…41fc27`). This is a deliberate exception to the no-weights rule, so a plain `git pull` gives the app its model. Made by `scripts/export_app_classifier.py`, checked in `results/app_classifier_export.json`. All other weights stay on the team drive. |
 | B, C | Class list with parsed make / model / year | `results/class_names.json` |
 | B | Exact train/val split used for every model | `results/split.json` |
 | B | Logits and 768-d embeddings for train/val/test | `artifacts/logits_*.npz`, `artifacts/embeddings_*.npz` (team drive) |
