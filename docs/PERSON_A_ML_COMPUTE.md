@@ -99,6 +99,22 @@ The notebook ran top to bottom on this laptop with every output saved (2026-11-0
 
 **Caveats to say in the viva:** thresholds are tuned on the same validation set used for early stopping and temperature, so quote the *test* state accuracies (above), not the validation ones. Validation contains only in-taxonomy cars, so out-of-taxonomy rejection is **not** measured here.
 
+### Deep baselines — `notebooks/01c_baseline_models.ipynb`
+
+The proposal (§13) trains ConvNeXt-Tiny *with an EfficientNetV2-S and a ResNet-50 baseline*. Both baselines used **the same split, cached crops, augmentation, two-stage schedule, layer decay, early stopping and temperature scaling** as notebook 01; only the backbone changed. Source: `results/baselines_metrics.json`. All rows use the same 8,041 test images.
+
+| Model (timm weights) | Params | Val Top-1 | Test Top-1 | Test Top-5 | Make Top-1 | Macro F1 | ECE | GPU / CPU ms (batch 1) |
+|---|---|---|---|---|---|---|---|---|
+| **ConvNeXt-Tiny** `convnext_tiny.fb_in22k_ft_in1k` | 28.0M | **92.23%** | **92.20%** | **98.42%** | **97.15%** | **0.921** | 0.024 | 5.2 / 56 |
+| EfficientNetV2-S `tf_efficientnetv2_s.in21k_ft_in1k` | 20.4M | 86.50% | 87.13% | 96.97% | 93.71% | 0.870 | 0.024 | 11.6 / 64 |
+| ResNet-50 `resnet50.a1_in1k` | 23.9M | 83.55% | 81.58% | 95.70% | 89.57% | 0.815 | 0.011 | 4.5 / 54 |
+
+- **Validation picks ConvNeXt-Tiny**, so the app keeps it. The test numbers agree, by 5.1 points over EfficientNetV2-S and 10.6 points over ResNet-50.
+- All three fit the 4 GB GPU at batch 32 without gradient checkpointing. Peak training VRAM was 2.06 GB for ConvNeXt, 2.51 GB for EfficientNetV2-S and 1.57 GB for ResNet-50.
+- **Epoch times are not comparable between notebooks.** The baselines took about 5 minutes per epoch (305–322 s) and about 2.7 hours each. During that run the GPU was at 87 °C and reporting thermal slowdown. ConvNeXt's run took 64 s per epoch.
+- Both baselines were still slowly improving when their 30-epoch fine-tuning limit ended (best epochs 28 and 30). Longer training might narrow the gap a little; this is disclosed, not hidden.
+- Baseline bundles: `checkpoints/baseline_resnet50.pt`, `checkpoints/baseline_efficientnetv2_s.pt` (local; not needed by the app).
+
 ## 5. Optimisation — `notebooks/01b_export_quantize.ipynb`
 
 Ran top to bottom with outputs saved. Source: `results/optimization_metrics.json`. CPU: i5-12500H, batch 1, 6 threads (fastest in the sweep; ONNX Runtime's default takes 152 ms because the efficiency cores slow every layer).
@@ -134,7 +150,7 @@ To run it in the app: create an `onnxruntime.InferenceSession` with `intra_op_nu
 | To | What | Where |
 |---|---|---|
 | B, C | Checkpoint bundle: weights, architecture, input size, normalisation, class names, temperature, thresholds | `checkpoints/apex3d_convnext_tiny.pt` (team drive). Load with `notebooks/cls_lib.load_classifier` and predict with `cls_lib.predict_crop` |
-| C | App classifier: the deployed INT8 variant with the temperature built in, so it auto-loads (§5) | `checkpoints/model_quantized.onnx` (team drive); made by `scripts/export_app_classifier.py`, checked in `results/app_classifier_export.json` |
+| C | App classifier: the deployed INT8 variant with the temperature built in, so it auto-loads (§5) | `checkpoints/model_quantized.onnx`, **committed to Git** on `person-a` (34.6 MB, sha256 `0167758b…41fc27`). This is a deliberate exception to the no-weights rule, so a plain `git pull` gives the app its model. Made by `scripts/export_app_classifier.py`, checked in `results/app_classifier_export.json`. All other weights stay on the team drive. |
 | B, C | Class list with parsed make / model / year | `results/class_names.json` |
 | B | Exact train/val split used for every model | `results/split.json` |
 | B | Logits and 768-d embeddings for train/val/test | `artifacts/logits_*.npz`, `artifacts/embeddings_*.npz` (team drive) |

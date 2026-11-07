@@ -53,6 +53,16 @@ Test set: 8,041 unseen images, ground-truth box crops.
 | CPU latency, batch 1, i5-12500H, 6 threads | 49.2 ms | 19.4 ms |
 | GPU latency, batch 1, RTX 3050 FP32 | 5.2 ms | — |
 
+**Why ConvNeXt-Tiny** (`results/baselines_metrics.json`, notebook 01c, same recipe and same test set):
+
+| Model | Test Top-1 |
+|---|---|
+| ConvNeXt-Tiny | 92.20% |
+| EfficientNetV2-S | 87.13% |
+| ResNet-50 | 81.58% |
+
+The choice was made on validation (92.23%, 86.50% and 83.55% respectively).
+
 **Confidence states** (thresholds chosen on validation). A prediction is *rejected* when the calibrated Top-1 probability is below 0.52. It is *ambiguous* when the gap between the Top-1 and Top-2 probabilities is below 0.34. Otherwise it is *confident*.
 
 | State | Share of test images | Accuracy |
