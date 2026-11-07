@@ -429,6 +429,42 @@
    ]
   }
  },
+ "backbones": {
+  "source": "results/baselines_metrics.json",
+  "generated_at": "2026-11-07T03:10:39.163722+00:00",
+  "data": {
+   "recipe": "identical to notebook 01 (split, crops, augmentation, two-stage schedule, early stopping, temperature scaling)",
+   "rows": [
+    {
+     "backbone": "convnext_tiny.fb_in22k_ft_in1k",
+     "params_m": 27.970852,
+     "val_top1": 0.9222586154937744,
+     "test_top1": 0.9220246076583862,
+     "test_top5": 0.984205961227417,
+     "test_macro_f1": 0.9207652635132609,
+     "cpu_ms": 56.28878999850713
+    },
+    {
+     "backbone": "resnet50.a1_in1k",
+     "params_m": 23.909636,
+     "val_top1": 0.835515558719635,
+     "test_top1": 0.8158189058303833,
+     "test_top5": 0.9569705128669739,
+     "test_macro_f1": 0.8148815927000006,
+     "cpu_ms": 53.70343499816954
+    },
+    {
+     "backbone": "tf_efficientnetv2_s.in21k_ft_in1k",
+     "params_m": 20.428564,
+     "val_top1": 0.8649754524230957,
+     "test_top1": 0.8712846636772156,
+     "test_top5": 0.9696555137634277,
+     "test_macro_f1": 0.870128813850537,
+     "cpu_ms": 63.72067999909632
+    }
+   ]
+  }
+ },
  "ablation": {
   "source": "results/ablation_inference.json",
   "generated_at": "2026-11-07T00:03:48.057957+00:00",

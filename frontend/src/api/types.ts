@@ -157,6 +157,10 @@ export interface StateMetrics {
   rows: { state: ConfidenceState; share: number; accuracy: number | null }[]
   rule?: string | null
 }
+export interface BackboneMetrics {
+  recipe?: string | null
+  rows: { backbone: string; params_m: number; val_top1: number; test_top1: number; test_top5: number; test_macro_f1: number; cpu_ms: number }[]
+}
 export interface OutOfTaxonomyMetrics {
   /** What happened to photos of things that are not one of the 196 cars. */
   rows: { group: string; images: number; rejected: number; ambiguous: number; confident: number }[]
@@ -188,6 +192,7 @@ export interface MetricsResponse {
   classifier?: MaybeSection<ClassifierMetrics>
   detection?: MaybeSection<DetectionMetrics>
   comparison?: MaybeSection<ComparisonMetrics>
+  backbones?: MaybeSection<BackboneMetrics>
   optimisation?: MaybeSection<OptimisationMetrics>
   robustness?: MaybeSection<RobustnessMetrics>
   confidence?: MaybeSection<ConfidenceMetrics>

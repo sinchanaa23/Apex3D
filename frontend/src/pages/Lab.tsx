@@ -385,6 +385,22 @@ export default function Lab() {
             )}
           </Section>
 
+          <Section
+            title="Which backbone"
+            why="Three image models trained the same way, so the only difference is the network. The deployed one was chosen on validation accuracy, and test is shown for reporting."
+            value={metrics.data.backbones}
+          >
+            {(d) => (
+              <>
+                <Table
+                  head={['Backbone', 'Parameters', 'Validation Top-1', 'Test Top-1', 'Test Top-5', 'Test macro F1', 'CPU time']}
+                  rows={d.rows.map((r) => [r.backbone, <Plain>{`${r.params_m.toFixed(1)} M`}</Plain>, <Rate value={r.val_top1} />, <Rate value={r.test_top1} />, <Rate value={r.test_top5} />, <Rate value={r.test_macro_f1} />, <Plain>{milliseconds(r.cpu_ms)}</Plain>])}
+                />
+                {d.recipe && <p className="mt-3 max-w-2xl text-sm text-ink-3">Recipe: {d.recipe}.</p>}
+              </>
+            )}
+          </Section>
+
           <Section title="Ablation study" why="One component removed at a time, to show what each contributes. Retraining runs may use fewer epochs, noted beside the row." value={metrics.data.ablation}>
             {(d) => (
               <>

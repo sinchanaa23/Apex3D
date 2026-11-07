@@ -98,6 +98,21 @@ def confidence_section() -> dict | str:
     return NOT_AVAILABLE
 
 
+def backbones_section() -> dict | str:
+    """Person A's three backbones, trained with one recipe (results/baselines_metrics.json)."""
+    baselines = load("baselines_metrics")
+    if not baselines:
+        return NOT_AVAILABLE
+    return section("baselines_metrics.json", {
+        "recipe": baselines.get("recipe"),
+        "rows": [
+            {"backbone": values["arch"], "params_m": values["params_m"], "val_top1": values["val_top1"], "test_top1": values["test_top1"],
+             "test_top5": values["test_top5"], "test_macro_f1": values["test_macro_f1"], "cpu_ms": values["cpu_fp32_ms"]}
+            for values in baselines["models"].values()
+        ],
+    })
+
+
 def out_of_taxonomy_section() -> dict | str:
     measured = load("out_of_taxonomy")
     if not measured:
@@ -193,6 +208,7 @@ def main() -> None:
         "confidence": confidence_section(),
         "out_of_taxonomy": out_of_taxonomy_section(),
         "comparison": comparison_section(),
+        "backbones": backbones_section(),
         "ablation": ablation_section(),
         "confused_pairs": confused_pairs_section(),
         "failure_cases": failure_section(),

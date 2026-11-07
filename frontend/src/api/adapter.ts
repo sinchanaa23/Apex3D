@@ -457,6 +457,7 @@ export function adaptMetrics(wire: WireMetrics): MetricsResponse {
     calibration: sectionFrom(classifierDoc, classifierDoc ? calibrationFromDoc(classifierDoc, rec(rec(rec(m.confidence)?.data)?.test_calibration)) : null),
     states: sectionFrom(classifierDoc, classifierDoc ? statesFromDoc(classifierDoc) : null),
     out_of_taxonomy: prefer('out_of_taxonomy', 'not available'),
+    backbones: prefer('backbones', 'not available'),
     robustness: prefer(
       'robustness',
       hasRows(m.robustness)
