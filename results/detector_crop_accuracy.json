@@ -1,0 +1,81 @@
+{
+  "experiment": "detector_crop_accuracy",
+  "model": "checkpoints/model_quantized.onnx (deployed)",
+  "min_score": 0.5,
+  "runs": {
+    "mobilenet": {
+      "detector_run": "detector_mobilenet_test_sample500",
+      "images": 500,
+      "is_random_sample": true,
+      "images_with_no_box_used_full_frame": 4,
+      "annotated_box": {
+        "top1": 0.918,
+        "top5": 0.988,
+        "macro_f1": 0.8740044640044641
+      },
+      "detector_crop": {
+        "top1": 0.924,
+        "top5": 0.992,
+        "macro_f1": 0.8850822450822451
+      },
+      "detector_crop_top1_margin_95": 0.023228108765028628,
+      "top_score_rule": {
+        "top1": 0.806,
+        "top5": 0.876,
+        "macro_f1": 0.7624243924243925
+      },
+      "images_changed_by_rule": 65,
+      "states_on_detector_crops": {
+        "confident": {
+          "share": 0.946,
+          "accuracy": 0.9492600422832981
+        },
+        "ambiguous": {
+          "share": 0.008,
+          "accuracy": 0.75
+        },
+        "rejected": {
+          "share": 0.046,
+          "accuracy": 0.43478260869565216
+        }
+      }
+    },
+    "resnet50": {
+      "detector_run": "detector_resnet50_test_sample500",
+      "images": 500,
+      "is_random_sample": true,
+      "images_with_no_box_used_full_frame": 0,
+      "annotated_box": {
+        "top1": 0.918,
+        "top5": 0.988,
+        "macro_f1": 0.8740044640044641
+      },
+      "detector_crop": {
+        "top1": 0.918,
+        "top5": 0.988,
+        "macro_f1": 0.8825070762570763
+      },
+      "detector_crop_top1_margin_95": 0.02404912811725198,
+      "top_score_rule": {
+        "top1": 0.796,
+        "top5": 0.874,
+        "macro_f1": 0.7431848805787686
+      },
+      "images_changed_by_rule": 63,
+      "states_on_detector_crops": {
+        "confident": {
+          "share": 0.948,
+          "accuracy": 0.9451476793248945
+        },
+        "ambiguous": {
+          "share": 0.012,
+          "accuracy": 0.6666666666666666
+        },
+        "rejected": {
+          "share": 0.04,
+          "accuracy": 0.35
+        }
+      }
+    }
+  }
+}

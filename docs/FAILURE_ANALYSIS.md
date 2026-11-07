@@ -40,7 +40,7 @@ Localisation cases come from a random sample of 500 test images, using the ResNe
 - **Image:** `images/test/02234.jpg`, Spyker C8 Coupe 2009
 - **Measured:** Chosen box IoU 0.59, score 1.00
 - **Cause:** COCO training images rarely show scissor doors, so the box covers only the body, while the annotation includes the raised doors. The Ford GT example behaves the same way.
-- **Improvement:** Effect on classification is unmeasured until detector-crop accuracy is run. The car's body stays in the crop, so the harm may be small. Retraining the detector on Stanford boxes could address it.
+- **Improvement:** The car's body stays in the crop, and detector crops overall didn't measurably lower accuracy on the test sample (see results/detector_crop_accuracy.json), but this specific case wasn't measured separately. Retraining the detector on Stanford boxes could address it.
 - **Status:** Open
 
 ## 5. The classical ROI locks onto the background

@@ -123,7 +123,7 @@ def main() -> None:
         [(chosen["box"], RED)],
         f"Chosen box IoU {rule_iou:.2f}, score {chosen['score']:.2f}",
         "COCO training images rarely show scissor doors, so the box covers only the body, while the annotation includes the raised doors. The Ford GT example behaves the same way.",
-        "Effect on classification is unmeasured until detector-crop accuracy is run. The car's body stays in the crop, so the harm may be small. Retraining the detector on Stanford boxes could address it.",
+        "The car's body stays in the crop, and detector crops overall didn't measurably lower accuracy on the test sample (see results/detector_crop_accuracy.json), but this specific case wasn't measured separately. Retraining the detector on Stanford boxes could address it.",
         "Open",
     )
 

@@ -1,46 +1,36 @@
 # Person B: data and evaluation guide
 
-Everything here ran on the real dataset unless it says otherwise. Results are in `results/`, and the final tables are in `eval_P5_DRAFT.md`.
+Everything here ran on the real dataset unless it says otherwise. Results are in `results/`, and the final tables are in `eval_P5_T25.md`.
 
-## Person A: last results still needed
+## Current state of the evaluation
 
-Hybrid, full robustness and crop ablations need your files, which aren't in Git. Nothing has produced them yet: `results/hybrid.json`, `robustness.json` and `ablation_inference.json` don't exist.
+Every P5 metric now has a measured result. The final model is `checkpoints/model_quantized.onnx`, sha256 `0167758b...41fc27`, and hybrid, robustness and confidence were measured on it with `scripts/evaluate_deployed_model.py`. An independent rerun of that model reproduced its 642 test errors exactly.
 
-**The quick option:** share `outputs\apex3d_person_a_handover.zip` with Person B. Hybrid and confidence then run from the saved embeddings without any model.
+**About test image 00010 (Person A's note 9):** this was the wrong-car bug. The detector found the main car at 0.87, but a 17×12 px background car scored 0.95 and was chosen. That crop was too small, so the app used the full frame. `detector_service.py` now picks the largest box above the score threshold.
 
-**About test image 00010 (your note 9):** this was the wrong-car bug. The detector found the main car at 0.87, but a 17×12 px background car scored 0.95 and was chosen. That crop was too small, so the app used the full frame. `detector_service.py` now picks the largest box above the score threshold.
-
-**Or run it all on your GPU laptop:**
+**Worth doing if time allows:** detector results come from samples of 400 and 500 images. On the GPU laptop, this would run the app's detector on all 8,041 images. The reports then use the full run automatically:
 
 ```bash
-python scripts/prepare_dataset.py
+python scripts/evaluate_detector.py --variant mobilenet --device cuda
 ```
 
 ```bash
-python scripts/evaluate_with_classifier.py --device cuda
+python scripts/evaluate_detector_crops.py
 ```
 
-```bash
-python scripts/evaluate_detector.py --variant resnet50 --device cuda
-```
-
-Run the detector on all 8,041 images before the second command if you can, so that the crop ablation uses the full set. The first command downloads about 2 GB with no login. `evaluate_with_classifier.py` expects `artifacts/*.npz` and `checkpoints/apex3d_convnext_tiny.pt` where your notebook saved them. It also needs `~/.apex3d/models/classical_baseline.joblib` for the classical robustness column. That column is skipped if the file is missing, and everything else still runs.
-
-**Then rebuild the reports and push `results/`:**
+**Rebuild the reports after any result changes:**
 
 ```bash
 python scripts/build_failure_cases.py
 ```
 
 ```bash
-python scripts/build_eval_report.py --team <TeamID> --usns USN1,USN2,USN3,USN4
+python scripts/build_eval_report.py --team T25 --usns 1RUA24CSE0461,1RUA24CSE0467,1RUA24CSE0445,1RUA24CSE0453
 ```
 
 ```bash
 python scripts/build_app_metrics.py
 ```
-
-The scripts stop with an error if the saved files or labels disagree with the dataset.
 
 ## Person C: detection in the app
 
@@ -87,7 +77,10 @@ python -m pytest tests/test_classical_cv.py tests/test_dataset.py tests/test_det
 ## What to say in the viva
 
 - **Classical vs deep:** classical reaches about 17% and deep about 92% on the same test images and crops. HOG carries most of the classical signal, because shape separates cars better than colour.
-- **CLAHE:** it didn't help on validation, so it's off in the classical model. We tested it instead of assuming it would help. Its low-light effect on the deep model is still to be measured.
-- **Biggest finding:** the detector's top score often picks a tiny background car. Choosing the largest confident box lifted mean IoU from 0.78 to 0.91 on validation. See `docs/FAILURE_ANALYSIS.md` for the case where that rule fails.
+- **CLAHE:** it didn't help the classical model on validation, so it's off. On the deep model under simulated low light, it lowered Top-1 at every level tested, by 0.5 to 2.2 points on 1,000 images. We tested it instead of assuming it would help.
+- **Hybrid:** adding classical features to the deep features didn't help: 92.09% against 92.18% with the same linear head on test. On validation the best fusion only tied. The useful integration is the pipeline around the model, not feature fusion. Report this as a real negative result.
+- **Biggest finding:** the detector's top score often picks a tiny background car. Choosing the largest confident box lifted mean IoU from 0.78 to 0.91 on validation. On 500 test images, it lifted full-pipeline Top-1 from 80.6% to 92.4% (± 2.3). See `docs/FAILURE_ANALYSIS.md` for the case where that rule fails.
+- **Detector crops:** on those images, the annotated box scored 91.8% and the app's detector crop 92.4%. That difference is within the margin of error, so say that detector crops didn't measurably hurt, not that they helped.
+- **Why two accuracy figures:** the deployed model scores 92.18% in Person A's notebook and 92.02% with the app's preprocessing. We reproduced the 92.02% exactly but couldn't fully explain the 13-image gap, so quote about 92.0-92.2%.
 - **Why mAP looks low:** only one car per image is annotated, so correct detections of other cars count as false positives.
 - **Sample sizes:** detector numbers come from samples of 400 and 500 images, unless a full run has replaced them.
