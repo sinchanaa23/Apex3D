@@ -1,0 +1,24 @@
+# Render Blueprint: New > Blueprint, pick this repository. See docs/DEPLOY_RENDER.md.
+services:
+  - type: web
+    name: apex3d
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Measured on the real code: a 3D mesh build peaks at about 1.25 GB for the whole server, so 512 MB (starter) is not
+    # enough and 2 GB (standard) is. See docs/DEPLOY_RENDER.md. The free plan can't hold this app.
+    plan: standard
+    healthCheckPath: /api/health
+    # A deploy happens when you press Deploy, not on every push, so a teammate's broken commit can't take the live site down.
+    autoDeploy: false
+    envVars:
+      - key: APEX3D_REQUIRE_LOGIN
+        value: "1"
+      - key: APEX3D_DISABLE_DOCS
+        value: "1"
+      # Standard has 1 CPU. Telling PyTorch avoids it starting more threads than the CPU can run.
+      - key: OMP_NUM_THREADS
+        value: "1"
+    disk:
+      name: apex3d-data
+      mountPath: /app/backend/storage
+      sizeGB: 1

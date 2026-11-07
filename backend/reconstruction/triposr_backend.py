@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import gc
 import os
+import logging
 import sys
 import threading
 import time
@@ -89,8 +90,9 @@ _iso_backend = ""
 def _import_tsr():
     global _iso_backend
     if not (TRIPOSR_DIR / "tsr" / "system.py").exists():
+        logging.getLogger("apex3d").warning("TripoSR source not found at %s. Run scripts/setup_triposr.ps1.", TRIPOSR_DIR)
         raise ReconstructionError(
-            f"TripoSR source not found at {TRIPOSR_DIR}. Run scripts/setup_triposr.ps1."
+            "Building a mesh from a photo is not available on this server. The showcase model on the 3D Studio page still works."
         )
     _iso_backend = mcubes_shim.install()
     if str(TRIPOSR_DIR) not in sys.path:

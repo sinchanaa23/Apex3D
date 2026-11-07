@@ -57,7 +57,12 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Apex3D Backend.")
 
 
+# On a public deployment set APEX3D_DISABLE_DOCS=1, so the interactive API pages (/docs, /redoc, /openapi.json) are not published.
+_docs = os.getenv("APEX3D_DISABLE_DOCS", "").strip().lower() not in {"1", "true", "yes", "on"}
 app = FastAPI(
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
     title="Apex3D — Vehicle Recognition & 3D Reconstruction API",
     description=(
         "Production backend for P5 Intelligent Fine-Grained Vehicle Recognition System.\n\n"
