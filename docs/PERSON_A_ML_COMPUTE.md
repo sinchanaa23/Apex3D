@@ -168,8 +168,13 @@ To run it in the app: create an `onnxruntime.InferenceSession` with `intra_op_nu
 4. The URL changes every time the tunnel restarts, so update the stable link page whenever it does.
 
 **Status:**
-- **Local full-stack test passed.** `main`, `backend-c` and `person-a` were merged in a local, unpushed branch. In that test, `/api/recognize` used `model_quantized.onnx` and predicted the right class ID for 5/5 test photos. `/api/reconstruct` returned a real TripoSR mesh in 42 s from a cold start. Person C must still fix the issues in `docs/INTEGRATION_NOTES_A_TO_C.md` (most urgently the class-name list).
-- **The public tunnel is still untested.** `cloudflared` is not installed yet. Install it with `winget install --id Cloudflare.cloudflared` (this may ask for admin approval).
+- **`main` runs end to end (2026-11-07, commit `918d627`, clean checkout on the GPU laptop).** The frontend builds and its 67 tests pass. The backend serves the built site on http://localhost:8000.
+  - `/api/recognize` loads `model_quantized.onnx` from Git and shows the **correct car name for 8 of 8** Stanford test photos.
+  - `/api/reconstruct` returns a real TripoSR mesh with GLB/OBJ/STL downloads.
+  - `/api/metrics`, `/api/classical` and `/api/references` all answer with real data.
+  - All critical items in `docs/INTEGRATION_NOTES_A_TO_C.md` are fixed on `main`.
+- **Backend tests:** 98 pass, and 4 of Person C's `tests/test_api.py` tests fail on a fresh clone. They use `TestClient(app)` without `with`, so the app's startup never creates the SQLite tables. They pass once the database exists. The fix is `with TestClient(app) as client:`.
+- **The public tunnel is still untested.** `cloudflared` is not installed yet. Install it with `winget install --id Cloudflare.cloudflared` (this needs admin approval on the laptop), then run `scripts\run_tunnel.ps1 -Port 8000`.
 
 ## 9. Team-drive package
 
