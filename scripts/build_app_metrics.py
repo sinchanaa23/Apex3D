@@ -88,6 +88,7 @@ def confidence_section() -> dict | str:
     if confidence:
         return section("confidence.json", {
             "chosen_threshold": confidence["thresholds"]["confident_p1"],
+            "test_calibration": {key: confidence.get(key) for key in ("ece_before", "ece_after", "nll_before", "nll_after")},
             "rows": [{"threshold": row["threshold"], "coverage": row["coverage"], "accuracy": row["accuracy_when_accepted"]} for row in confidence["test_coverage_curve"] if row["accuracy_when_accepted"] is not None],
         })
     if metrics:

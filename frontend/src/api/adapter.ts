@@ -311,15 +311,36 @@ function statesFromDoc(doc: Record<string, unknown>) {
   return { rows, rule }
 }
 
-function calibrationFromDoc(doc: Record<string, unknown>) {
+/** `measured` is the deployed model's own test-set calibration (results/confidence.json), when the metrics file has it. */
+/**
+ * The calibration table comes from Person A's saved file, which has no test-set "before" values. The backend's metrics
+ * carry the deployed model's own test ECE and NLL, so those rows are replaced with them when they are there.
+ */
+export function withMeasuredCalibration(calibration: unknown, confidence: unknown): unknown {
+  const cal = rec(calibration)
+  const data = rec(cal?.data)
+  const measured = rec(rec(rec(confidence)?.data)?.test_calibration)
+  if (!cal || !data || !Array.isArray(data.rows) || !measured) return calibration
+  const rows = (data.rows as { metric: string; before: number | null; after: number | null }[]).map((row) =>
+    row.metric === 'Test ECE'
+      ? { ...row, before: orNull(measured.ece_before) ?? row.before, after: orNull(measured.ece_after) ?? row.after }
+      : row.metric === 'Test NLL'
+        ? { ...row, before: orNull(measured.nll_before) ?? row.before, after: orNull(measured.nll_after) ?? row.after }
+        : row,
+  )
+  return { ...cal, data: { ...data, rows } }
+}
+
+export function calibrationFromDoc(doc: Record<string, unknown>, measured?: Record<string, unknown> | null) {
   const c = rec(doc.calibration)
   const test = rec(doc.test)
   if (!c || !isNumber(c.temperature)) return null
+  const m = measured ?? {}
   const rows = [
     { metric: 'Validation ECE', before: orNull(c.val_ece_before), after: orNull(c.val_ece_after) },
     { metric: 'Validation NLL', before: orNull(c.val_nll_before), after: orNull(c.val_nll_after) },
-    { metric: 'Test ECE', before: null, after: orNull(test?.ece_calibrated) },
-    { metric: 'Test NLL', before: null, after: orNull(test?.nll_calibrated) },
+    { metric: 'Test ECE', before: orNull(m.ece_before), after: orNull(m.ece_after ?? test?.ece_calibrated) },
+    { metric: 'Test NLL', before: orNull(m.nll_before), after: orNull(m.nll_after ?? test?.nll_calibrated) },
   ].filter((row) => row.before != null || row.after != null)
   return { temperature: c.temperature, rows }
 }
@@ -433,7 +454,7 @@ export function adaptMetrics(wire: WireMetrics): MetricsResponse {
           ? sectionFrom(optimisationDoc, optimisationFromDoc(optimisationDoc))
           : 'not available',
     run: sectionFrom(classifierDoc, classifierDoc ? runFromDoc(classifierDoc) : null),
-    calibration: sectionFrom(classifierDoc, classifierDoc ? calibrationFromDoc(classifierDoc) : null),
+    calibration: sectionFrom(classifierDoc, classifierDoc ? calibrationFromDoc(classifierDoc, rec(rec(rec(m.confidence)?.data)?.test_calibration)) : null),
     states: sectionFrom(classifierDoc, classifierDoc ? statesFromDoc(classifierDoc) : null),
     out_of_taxonomy: prefer('out_of_taxonomy', 'not available'),
     robustness: prefer(

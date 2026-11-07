@@ -1,6 +1,6 @@
 // Inputs follow the examples in Person C's docs/API_CONTRACT.md.
 import { describe, expect, it } from 'vitest'
-import { adaptClassical, adaptJob, adaptMetrics, adaptRecognition, adaptReference } from './adapter'
+import { adaptClassical, adaptJob, adaptMetrics, adaptRecognition, adaptReference, calibrationFromDoc } from './adapter'
 
 const box = { x1: 42, y1: 115, x2: 612, y2: 450, confidence: 0.94, label: 'car' }
 const prediction = { class_id: 0, class_name: 'AM General Hummer SUV 2000', probability: 0.88 }
@@ -181,6 +181,13 @@ describe("adaptMetrics with Person A's classifier file", () => {
     expect(temperature).toBeCloseTo(0.6166, 3)
     expect(rows.find((r) => r.metric === 'Validation ECE')).toMatchObject({ before: expect.closeTo(0.2075, 3), after: expect.closeTo(0.034, 3) })
     expect(rows.find((r) => r.metric === 'Test ECE')).toMatchObject({ before: null })
+  })
+  it('uses the deployed model\'s measured test calibration when the file has it', () => {
+    const doc = { calibration: { temperature: 0.6, val_ece_before: 0.2, val_ece_after: 0.03 }, test: {} }
+    const measured = { ece_before: 0.175, ece_after: 0.023, nll_before: 0.547, nll_after: 0.364 }
+    const out = calibrationFromDoc(doc, measured)!
+    expect(out.rows.find((r) => r.metric === 'Test ECE')).toMatchObject({ before: 0.175, after: 0.023 })
+    expect(out.rows.find((r) => r.metric === 'Test NLL')).toMatchObject({ before: 0.547, after: 0.364 })
   })
   it('lists the training run from recorded fields only', () => {
     const rows = available<{ rows: { label: string; value: string }[] }>(result.run).data.rows

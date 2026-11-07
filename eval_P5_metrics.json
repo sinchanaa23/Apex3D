@@ -181,9 +181,15 @@
  },
  "confidence": {
   "source": "results/confidence.json",
-  "generated_at": "2026-11-06T21:37:01.995791+00:00",
+  "generated_at": "2026-11-07T02:51:01.579597+00:00",
   "data": {
    "chosen_threshold": 0.52,
+   "test_calibration": {
+    "ece_before": 0.17519467594022106,
+    "ece_after": 0.02283496681604049,
+    "nll_before": 0.5470247864723206,
+    "nll_after": 0.36377260088920593
+   },
    "rows": [
     {
      "threshold": 0.0,

@@ -140,9 +140,16 @@ def main() -> None:
 
     if "confidence" in args.stages:
         print("Confidence and threshold analysis...", flush=True)
+        test_probabilities = probabilities[masks["test"]]
+        temperature = metrics["calibration"]["temperature"]
+
+        def nll(p):  # mean negative log-likelihood of the true class
+            return float(-np.log(np.clip(p[np.arange(len(y_test)), y_test], 1e-12, None)).mean())
+
         ex.save_json(
             {"experiment": "confidence", "model": "checkpoints/model_quantized.onnx (deployed)",
-             **ex.confidence_experiment(probabilities[masks["test"]], y_test, metrics["calibration"]["temperature"], metrics["thresholds"])},
+             **ex.confidence_experiment(test_probabilities, y_test, temperature, metrics["thresholds"]),
+             "nll_before": nll(test_probabilities), "nll_after": nll(conf.apply_temperature(test_probabilities, temperature))},
             RESULTS / "confidence.json",
         )
 

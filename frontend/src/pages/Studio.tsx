@@ -185,7 +185,11 @@ function ShowcaseBlock({ label, extra }: { label?: string | null; extra?: ReactN
   )
 }
 
+const tabClass = (active: boolean) =>
+  `inline-flex min-h-10 items-center gap-2 rounded-lg border px-4 text-sm ${active ? 'border-accent bg-accent/15 text-ink' : 'border-line-strong text-ink-2 hover:bg-raised'}`
+
 function StartPanel() {
+  const [view, setView] = useState<'showcase' | 'mesh'>('showcase')
   const { photo, identity, input } = useSession()
   const { canStart, start, busy, error } = useStartJob()
   const inputUrl = input?.kind === 'photo' ? photo?.url : input?.reference.image_url
@@ -208,9 +212,17 @@ function StartPanel() {
   return (
     <div>
       <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={identity ? `A 3D car in the style of ${identity.label}, adapted to your photo.` : 'A 3D car adapted to your photo.'} />
-      <ShowcaseBlock
-        label={identity?.label}
-        extra={
+      <div role="tablist" aria-label="Which model to show" className="mb-6 flex flex-wrap gap-2">
+        <button type="button" role="tab" aria-selected={view === 'showcase'} className={tabClass(view === 'showcase')} onClick={() => setView('showcase')}>
+          Showcase model
+        </button>
+        <button type="button" role="tab" aria-selected={view === 'mesh'} className={tabClass(view === 'mesh')} onClick={() => setView('mesh')}>
+          Experimental mesh <span className="font-mono text-xs text-ink-3">not built</span>
+        </button>
+      </div>
+      {view === 'showcase' && <ShowcaseBlock label={identity?.label} />}
+      {view === 'mesh' && (
+        <div className="max-w-3xl">
           <Card title="Experimental: rebuild from a photo">
             <div className="flex items-center gap-3">
               <img src={inputUrl} alt="Reconstruction input" className="h-16 w-24 rounded-md bg-raised object-cover" />
@@ -235,8 +247,8 @@ function StartPanel() {
               </Link>
             </div>
           </Card>
-        }
-      />
+        </div>
+      )}
     </div>
   )
 }
@@ -435,7 +447,7 @@ function JobView({ id }: { id: string }) {
   const { identity } = useSession()
   const { job, lost, fatal } = useJob(id)
   const { canStart, start, busy, error } = useStartJob()
-  const [view, setView] = useState<'showcase' | 'mesh'>('showcase')
+  const [view, setView] = useState<'showcase' | 'mesh'>('mesh')
 
   if (fatal) {
     return <EmptyState title="Job not available" body={`${fatal} Generated files are removed by a cleanup step, so older links stop working.`} action={{ to: '/studio', label: 'Back to 3D Studio' }} />
@@ -451,8 +463,7 @@ function JobView({ id }: { id: string }) {
   const glb = job.result?.files.find((file) => file.format === 'glb')
   const label = identity?.label ?? job.class_name ?? null
   const building = job.status === 'queued' || job.status === 'running'
-  const tab = (active: boolean) =>
-    `inline-flex min-h-10 items-center gap-2 rounded-lg border px-4 text-sm ${active ? 'border-accent bg-accent/15 text-ink' : 'border-line-strong text-ink-2 hover:bg-raised'}`
+  const tab = tabClass
 
   return (
     <div>
@@ -460,7 +471,7 @@ function JobView({ id }: { id: string }) {
         <ArrowLeft aria-hidden className="size-4" />
         Back to 3D Studio
       </Link>
-      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={label ? (view === 'showcase' ? `A 3D car in the style of ${label}.` : job.mesh_source === 'catalog' ? `Catalog model of ${label}.` : `Experimental mesh of ${label}.`) : undefined} />
+      <PageHeader eyebrow="05 / 3D Studio" title="3D Studio" intro={label ? (view === 'showcase' ? `A 3D car in the style of ${label}, adapted to your photo.` : job.mesh_source === 'catalog' ? `Catalog model of ${label}.` : `Experimental mesh of ${label}.`) : undefined} />
 
       <div role="tablist" aria-label="Which model to show" className="mb-6 flex flex-wrap gap-2">
         <button type="button" role="tab" aria-selected={view === 'showcase'} className={tab(view === 'showcase')} onClick={() => setView('showcase')}>

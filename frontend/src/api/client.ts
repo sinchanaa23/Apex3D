@@ -5,6 +5,7 @@ import {
   adaptRecognition,
   adaptReference,
   adaptReferences,
+  withMeasuredCalibration,
   type WireClassical,
   type WireJob,
   type WireMetrics,
@@ -216,5 +217,6 @@ export async function getMetrics(signal?: AbortSignal): Promise<MetricsResponse>
   for (const [key, value] of Object.entries(fromApi ?? {})) {
     if (key !== 'message' && value != null && value !== 'not available') (merged as Record<string, unknown>)[key] = value
   }
+  ;(merged as Record<string, unknown>).calibration = withMeasuredCalibration(merged.calibration, merged.confidence)
   return hasSection(merged) ? merged : (fromApi ?? merged)
 }
